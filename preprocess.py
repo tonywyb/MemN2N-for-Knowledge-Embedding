@@ -4,7 +4,7 @@ import json
 import copy
 
 
-def pre_process(mode):
+def pre_process(ori, mode):
     for ith, i in enumerate(ori[mode].values()):
         tmp_knowledge = i["knowledge"]
         ori[mode][str(ith)]["knowledge"] = [[], []]
@@ -45,11 +45,17 @@ def pre_process(mode):
                     ori[mode][str(ith)]["conversation"][lth] = ori[mode][str(ith)]["conversation"][lth - 1]
 
 
-ori = json.loads(open("train_part.json", "rb").read())
+toy_ori = json.loads(open("train_part.json", "rb").read())
+ori = json.loads(open("train+test.json", "rb").read())
 mode = ["train", "test"]
 for m in mode:
-    pre_process(m)
+    pre_process(toy_ori, m)
+    # pre_process(ori, m)
 
 f = open("toy_train_part.json", "w")
-res = json.dumps(ori)
+res = json.dumps(toy_ori)
 f.write(res)
+
+# f = open("train+test_part.json", "w")
+# res = json.dumps(ori)
+# f.write(res)

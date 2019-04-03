@@ -6,6 +6,7 @@ import os
 import re
 import numpy as np
 
+
 def load_task(data_dir, task_id, only_supporting=False):
     """
     Load the nth task. There are 20 tasks in total.
@@ -13,6 +14,7 @@ def load_task(data_dir, task_id, only_supporting=False):
     """
     assert task_id > 0 and task_id < 21
 
+    os.chdir("/Users/wangyanbin/Desktop/MemN2N-pytorch/")
     files = os.listdir(data_dir)
     files = [os.path.join(data_dir, f) for f in files]
     s = "qa{}_".format(task_id)

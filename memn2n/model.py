@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.init as init
 from torch.autograd import Variable
 
+
 def position_encoding(sentence_size, embedding_dim):
     encoding = np.ones((embedding_dim, sentence_size), dtype=np.float32)
     ls = sentence_size + 1
@@ -15,6 +16,7 @@ def position_encoding(sentence_size, embedding_dim):
     # Make position encoding of time words identity to avoid modifying them
     encoding[:, -1] = 1.0
     return np.transpose(encoding)
+
 
 class AttrProxy(object):
     """

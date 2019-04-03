@@ -10,10 +10,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import random
 import json
+# import os
 
 
 learning_rate = 0.01
-data_path = "train&test.json"
+data_path = "train+test.json"
 en_path = "default"
 de_path = "default"
 se_path = "default"
@@ -31,7 +32,7 @@ class WIdic:
         self.totalwords = 2
         
     def addword(self, word):
-        if self.word2index.get(word) == None:    
+        if self.word2index.get(word) is None:
             self.word2index[word] = self.totalwords
             self.index2word[self.totalwords] = word
             self.totalwords = self.totalwords + 1
@@ -172,7 +173,7 @@ def init():
         g_sent = ""
         for gi in dataset["test"][tei]["goal"]:
             g_sent = gi[0] + " " + gi[1] + " " + gi[2]
-        mydic.addsent(g_sent)
+            mydic.addsent(g_sent)
     print("data prepared")
  
     
@@ -187,9 +188,9 @@ def run():
         mydecoder.eval()
         myseq2seq = torch.load(se_path)
         myseq2seq.eval()
-    en_optim = torch.optim.SGD(myencoder.parameters(), lr = learning_rate, momentum = 0.5, dampening = 0.1)
-    de_optim = torch.optim.SGD(mydecoder.parameters(), lr = learning_rate, momentum = 0.5, dampening = 0.1)
-    se_optim = torch.optim.SGD(myseq2seq.parameters(), lr = learning_rate, momentum = 0.5, dampening = 0.1)
+    en_optim = torch.optim.SGD(myencoder.parameters(), lr=learning_rate, momentum=0.5, dampening=0.1)
+    de_optim = torch.optim.SGD(mydecoder.parameters(), lr=learning_rate, momentum=0.5, dampening=0.1)
+    se_optim = torch.optim.SGD(myseq2seq.parameters(), lr=learning_rate, momentum=0.5, dampening=0.1)
     lossfunc = nn.NLLLoss()
     for epi in range(epoch):
         print(epi, ":")

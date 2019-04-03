@@ -1,12 +1,13 @@
 import argparse
 import trainer
 
+
 def parse_config():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", action="store_true")
     parser.add_argument("--dataset_dir", type=str, default="bAbI/tasks_1-20_v1-2/en/")
     parser.add_argument("--task", type=int, default=1)
-    parser.add_argument("--max_hops", type=int, default=3)
+    parser.add_argument("--max_hops", type=int, default=2)  # 3
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--max_epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=0.01)
