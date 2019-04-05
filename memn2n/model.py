@@ -37,16 +37,22 @@ class MemN2N(nn.Module):
         super(MemN2N, self).__init__()
 
         use_cuda = settings["use_cuda"]
-        num_vocab = settings["num_vocab"]
+        self.num_vocab = settings["num_vocab"]
         embedding_dim = settings["embedding_dim"]
         sentence_size = settings["sentence_size"]
         self.max_hops = settings["max_hops"]
 
         for hop in range(self.max_hops+1):
-            C = nn.Embedding(num_vocab, embedding_dim, padding_idx=0)
+            C = nn.Embedding(self.num_vocab, embedding_dim, padding_idx=0)
             C.weight.data.normal_(0, 0.1)
             self.add_module("C_{}".format(hop), C)
         self.C = AttrProxy(self, "C_")
+
+        # added by wyb
+        self.last_layer = torch.FloatTensor(sentence_size, embedding_dim, self.num_vocab)
+        self.last_layer.data.normal_(0, 0.1)
+        self.last_layer.requires_grad_(True)
+        # end add
 
         self.softmax = nn.Softmax()
         self.encoding = Variable(torch.FloatTensor(
@@ -83,6 +89,11 @@ class MemN2N(nn.Module):
        
             u_k = u[-1] + o_k
             u.append(u_k)
-       
-        a_hat = u[-1]@self.C[self.max_hops].weight.transpose(0, 1)
-        return a_hat, self.softmax(a_hat)
+
+        a_hat = torch.FloatTensor(story_size[2], story_size[0], self.num_vocab)
+        # a_hat = u[-1]@self.C[self.max_hops].weight.transpose(0, 1)
+        for i in range(self.last_layer.shape[0]):
+            a_hat[i] = torch.matmul(u[-1], self.last_layer[i])
+        # print(a_hat.shape)
+        # a_hat = torch.matmul(tmp, self.last_layer)
+        return a_hat, self.softmax(a_hat)   # a_hat has dimension: sentence_size * batch_size * num_vocab
