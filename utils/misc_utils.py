@@ -1,7 +1,5 @@
 import os
 import errno
-import numpy as np
-import cv2 # Needed before importing torch to get rid of segmentation faults
 import torch
 import torch.nn.functional as F
 

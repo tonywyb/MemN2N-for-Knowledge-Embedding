@@ -1,8 +1,10 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.init as init
-from torch.autograd import Variable
+
+import sys
+sys.path.append('./')
+from utils.misc_utils import optim_list
 
 
 def position_encoding(sentence_size, embedding_dim):
@@ -34,14 +36,25 @@ class AttrProxy(object):
 
 
 class MemN2N(nn.Module):
-    def __init__(self, settings):
+    def __init__(self, *args, **kwargs):
         super(MemN2N, self).__init__()
+        # Optimizer and Losses
+        self.optimizer = optim_list[kwargs['optimizer']](self.parameters(),
+                            **kwargs['params'])
 
-        use_cuda = settings["use_cuda"]
-        num_vocab = settings["num_vocab"]
-        embedding_dim = settings["embedding_dim"]
-        sentence_size = settings["sentence_size"]
-        self.max_hops = settings["max_hops"]
+        self.ce_fn = nn.CrossEntropyLoss(size_average=False)
+        self.mse_fn = nn.MSELoss()
+        self.opt = torch.optim.SGD(self.mem_n2n.parameters(), lr=kwargs['params']['lr'])
+
+        self.device = args[0]
+        self.logger = args[1]
+
+        self.encoding.to(self.device)
+
+        num_vocab = kwargs["num_vocab"]
+        sentence_size = kwargs["sentence_size"]
+        self.max_hops = kwargs["max_hops"]
+        embedding_dim = kwargs["embedding_dim"]
 
         for hop in range(self.max_hops + 1):
             C = nn.Embedding(num_vocab, embedding_dim, padding_idx=0)
@@ -50,11 +63,8 @@ class MemN2N(nn.Module):
         self.C = AttrProxy(self, "C_")
 
         self.softmax = nn.Softmax()
-        self.encoding = Variable(torch.FloatTensor(
-            position_encoding(sentence_size, embedding_dim)), requires_grad=False)
-
-        if use_cuda:
-            self.encoding = self.encoding.cuda()
+        self.encoding = torch.FloatTensor(
+            position_encoding(sentence_size, embedding_dim))
 
     def forward(self, story, query):
         story_size = story.size()
@@ -87,3 +97,28 @@ class MemN2N(nn.Module):
 
         a_hat = u[-1] @ self.C[self.max_hops].weight.transpose(0, 1)
         return a_hat, self.softmax(a_hat)
+
+    def fit_batch(self, story, query, target):
+        ## Predict output
+        net_out = self(story, query)[0]
+        ## Compute training loss
+        loss = self.ce_fn(net_out, target)
+        loss.backward()
+
+        # Do backprop
+        self.opt.zero_grad()
+        self._gradient_noise_and_clip(self.parameters(),
+                                      noise_stddev=1e-3, max_clip=config.max_clip)
+        self.opt.step()
+        return loss.data.item()
+
+    def _gradient_noise_and_clip(self, parameters,
+                                 noise_stddev=1e-3, max_clip=40.0):
+        parameters = list(filter(lambda p: p.grad is not None, parameters))
+        nn.utils.clip_grad_norm(parameters, max_clip)
+
+        for p in parameters:
+            noise = torch.randn(p.size()) * noise_stddev
+            if self.config.cuda:
+                noise = noise.cuda()
+            p.grad.data.add_(noise)

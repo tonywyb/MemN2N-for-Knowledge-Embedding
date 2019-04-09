@@ -148,7 +148,7 @@ class CustomArgumentParser(argparse.ArgumentParser):
             using the dot(.) operator.
 
         Example:
-            ### Configuration file: config.py ###
+            ### Configuration file: cfg.py ###
             config = {
                 'arg1': 4,
                 'arg2': {
@@ -156,10 +156,10 @@ class CustomArgumentParser(argparse.ArgumentParser):
                     'obj2': 'foo'
                 }
             }
-            ### End: config.py ###
+            ### End: cfg.py ###
 
             ```bash
-            python3 <main_program.py> -c config.py --arg1 3 --arg2.obj2 bar
+            python3 <main_program.py> -c cfg.py --arg1 3 --arg2.obj2 bar
                 [other arguments added to the parser]
             ```
 
@@ -187,7 +187,7 @@ class CustomArgumentParser(argparse.ArgumentParser):
             using the dot(.) operator.
 
         Example:
-            ### Configuration file: config.py ###
+            ### Configuration file: cfg.py ###
             config = {
                 'arg1': 4,
                 'arg2': {
@@ -195,10 +195,10 @@ class CustomArgumentParser(argparse.ArgumentParser):
                     'obj2': 'foo'
                 }
             }
-            ### End: config.py ###
+            ### End: cfg.py ###
 
             ```bash
-            python3 <main_program.py> -c config.py --arg1 3 --arg2.obj2 bar
+            python3 <main_program.py> -c cfg.py --arg1 3 --arg2.obj2 bar
                 [other arguments]
             ```
 
