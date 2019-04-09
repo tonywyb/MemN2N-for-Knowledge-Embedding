@@ -35,26 +35,17 @@ class AttrProxy(object):
         return getattr(self.module, self.prefix + str(i))
 
 
-class MemN2N(nn.Module):
-    def __init__(self, *args, **kwargs):
-        super(MemN2N, self).__init__()
-        # Optimizer and Losses
-        self.optimizer = optim_list[kwargs['optimizer']](self.parameters(),
-                            **kwargs['params'])
-
-        self.ce_fn = nn.CrossEntropyLoss(size_average=False)
-        self.mse_fn = nn.MSELoss()
-        self.opt = torch.optim.SGD(self.mem_n2n.parameters(), lr=kwargs['params']['lr'])
-
-        self.device = args[0]
-        self.logger = args[1]
-
-        self.encoding.to(self.device)
+class Net(nn.Module):
+    def __init__(self, device, logger, config_init, *args, **kwargs):
+        super(Net, self).__init__()
+        self.device = device
+        self.logger = logger
 
         num_vocab = kwargs["num_vocab"]
         sentence_size = kwargs["sentence_size"]
-        self.max_hops = kwargs["max_hops"]
-        embedding_dim = kwargs["embedding_dim"]
+        self.max_hops = config_init["max_hops"]
+        embedding_dim = config_init["embedding_dim"]
+        self.max_clip = config_init["max_clip"]
 
         for hop in range(self.max_hops + 1):
             C = nn.Embedding(num_vocab, embedding_dim, padding_idx=0)
@@ -64,7 +55,13 @@ class MemN2N(nn.Module):
 
         self.softmax = nn.Softmax()
         self.encoding = torch.FloatTensor(
-            position_encoding(sentence_size, embedding_dim))
+            position_encoding(sentence_size, embedding_dim)).to(self.device)
+
+        # Optimizer and Losses
+        self.optimizer = optim_list[config_init['optimizer']](self.parameters(), **config_init['params'])
+        self.loss = nn.CrossEntropyLoss(reduction='none')
+        self.total_loss = nn.CrossEntropyLoss(reduction='sum')
+        self.mean_loss = nn.CrossEntropyLoss(reduction='elementwise_mean', size_average=False)
 
     def forward(self, story, query):
         story_size = story.size()
@@ -102,14 +99,14 @@ class MemN2N(nn.Module):
         ## Predict output
         net_out = self(story, query)[0]
         ## Compute training loss
-        loss = self.ce_fn(net_out, target)
+        loss = self.mean_loss(net_out, target)
         loss.backward()
 
         # Do backprop
-        self.opt.zero_grad()
+        self.optimizer.zero_grad()
         self._gradient_noise_and_clip(self.parameters(),
-                                      noise_stddev=1e-3, max_clip=config.max_clip)
-        self.opt.step()
+                                      noise_stddev=1e-3, max_clip=self.max_clip)
+        self.optimizer.step()
         return loss.data.item()
 
     def _gradient_noise_and_clip(self, parameters,
@@ -119,6 +116,5 @@ class MemN2N(nn.Module):
 
         for p in parameters:
             noise = torch.randn(p.size()) * noise_stddev
-            if self.config.cuda:
-                noise = noise.cuda()
+            noise = noise.to(self.device)
             p.grad.data.add_(noise)

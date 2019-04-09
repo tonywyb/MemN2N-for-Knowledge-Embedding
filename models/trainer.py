@@ -38,8 +38,9 @@ class Trainer:
         spec.loader.exec_module(net_mod)
         sys.modules['net_mod'] = net_mod
         # First load network
-        self.net = net_mod.Net(self.device, self.logger, num_vocab=kwargs["num_vocab"],
-                               sentence_size=kwargs["sentence_size"], **self.config['init'])
+        self.net = net_mod.Net(self.device, self.logger, self.config['init'],
+                               num_vocab=kwargs["num_vocab"],
+                               sentence_size=kwargs["sentence_size"])
         # Then load its params if available
         if self.config['net'].get('saved_params_path', None) is not None:
             self.load_net(self.config['net']['saved_params_path'])
@@ -153,10 +154,10 @@ class Trainer:
         ## Set network mode
         self.net.eval()
         torch.set_grad_enabled(False)
-        for batch_idx, (data, target) in enumerate(data_loader):
-            data, target = data.to(self.device), target.to(self.device)
+        for batch_idx, (story, query, target) in enumerate(data_loader):
+            story, query, target = story.to(self.device), query.to(self.device), target.to(self.device)
             ## Predict output
-            net_out = self.net(data)
+            net_out = self.net(story, query)[0]
             ## Compute loss and accuracy
             batch_loss = self.net.total_loss(net_out, target).data
             batch_acc, batch_correct, batch_total = self.compute_topK_acc(
@@ -242,11 +243,11 @@ class Trainer:
         return plots
 
     def _decay_learning_rate(self, opt, epoch):
-        decay_interval = self.config.decay_interval
-        decay_ratio    = self.config.decay_ratio
+        decay_interval = self.config["init"]["decay_interval"]
+        decay_ratio    = self.config["init"]["decay_ratio"]
 
         decay_count = max(0, epoch // decay_interval)
-        lr = self.config.lr * (decay_ratio ** decay_count)
+        lr = self.config["init"]["params"]["lr"] * (decay_ratio ** decay_count)
         for param_group in opt.param_groups:
             param_group["lr"] = lr
 

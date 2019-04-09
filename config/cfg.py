@@ -10,7 +10,7 @@ config = {
 
     # config to load and save networks
     'net': {
-        'net_path': 'memn2n/memn2n.py',              # path to load network from
+        'net_path': 'memn2n/memn2n.py',             # path to load network from
         'saved_params_path': None                   # path to load saved weights in a loaded network
     },
 
@@ -31,7 +31,8 @@ config = {
         'decay_ratio': 0.5,                         # learning rate decay
         'max_clip': 40.0,                           # gradient noise and clip
         'max_hops': 3,                              # hops of memory network
-        'embedding_dim': 20,
+        'embedding_dim': 20,                        # query/memory embedding in memory network
+        'log_interval': 100,                        # Logging interval for debugging (None, int)
         'params': {
             'lr': 1e-2,                             # Learning rate: float
             'momentum': 0.0                         # Momentum: float in [0.0, 1.0]

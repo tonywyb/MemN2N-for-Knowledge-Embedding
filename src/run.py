@@ -73,14 +73,12 @@ def run(config, logger):
         val_loader = None
 
     # Import model
-    settings = {
-        "num_vocab": data_mod.tr_dataset.num_vocab,
-        "sentence_size": data_mod.tr_dataset.num_vocab
-    }
+
     spec = importlib.util.spec_from_file_location('model', config['modelfile'])
     model_mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(model_mod)
-    model = model_mod.Model(device, logger, global_records, config, settings)
+    model = model_mod.Model(device, logger, global_records, config,
+                            num_vocab=data_mod.tr_dataset.num_vocab, sentence_size=data_mod.tr_dataset.sentence_size)
 
     # Train mode
     if config['mode'] == 'train':
