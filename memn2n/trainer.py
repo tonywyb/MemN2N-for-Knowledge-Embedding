@@ -9,19 +9,24 @@ from dataset import bAbIDataset
 from model import MemN2N
 import json
 import torch.utils.data as data
+import collections
 
 
 class WIdic:
     def __init__(self):
-        self.word2index = {"<EOS>": 0, "START": 1}
-        self.index2word = {0: "<EOS>", 1: "START"}
-        self.totalwords = 2
+        self.word2index = {"<EOS>": 0, "<SOS>": 1, "OOV": 2}
+        self.index2word = {0: "<EOS>", 1: "<SOS>", 2: "OOV"}
+        self.word2num = {"<EOS>": 1, "<SOS>": 1, "OOV": 2}
+        self.totalwords = 3
 
     def addword(self, word):
         if self.word2index.get(word) is None:
             self.word2index[word] = self.totalwords
             self.index2word[self.totalwords] = word
+            self.word2num[word] = 1
             self.totalwords = self.totalwords + 1
+        else:
+            self.word2num[word] += 1
 
     def addsent(self, sent):
         for word in sent.split():
@@ -30,7 +35,10 @@ class WIdic:
     def W2I(self, sent):
         outv = []
         for words in sent.split():
-            outv.append(self.word2index[words])
+            if self.word2index.get(words) is None:
+                outv.append(self.word2index["OOV"])
+            else:
+                outv.append(self.word2index[words])
         outv.append(0)
         return outv
 
@@ -40,61 +48,23 @@ class WIdic:
             outs += self.index2word[index]
         return outs
 
-# learning_rate = 0.01
-data_path = "../train_part.json"
-# en_path = "default"
-# de_path = "default"
-# se_path = "default"
-# train_mode = 1
-# SOS = 1
-# EOS = 0
-# epoch = 20000
-mydic = WIdic()
-dataset = json.load(open(data_path, 'r', encoding='utf-8'))
-train_num = len(dataset["train"])
-test_num = len(dataset["test"])
-
-max_sent_len = 0
-max_story_len = 0
-mean_story_len = 0
-story_num = 0
-total_story_len = 0
-max_story_size = 0
-
-for tri in dataset["train"]:
-    for sent in dataset["train"][tri]["conversation"]:
-        mydic.addsent(sent)
-        max_sent_len = max(max_sent_len, len(sent))
-    for kl in dataset["train"][tri]["knowledge"]:
-        max_story_size = max(max_story_size, len(dataset["train"][tri]["knowledge"]))
-        cur_len = len(kl[0]) + len(kl[1]) + len(kl[2]) + 2
-        max_story_len = max(max_story_len, cur_len)
-        story_num += 1
-        total_story_len += cur_len
-        tmp_sent = " ".join(kl)
-        mydic.addsent(tmp_sent)
-mean_story_len = total_story_len / story_num
-
-for tei in dataset["test"]:
-    for sent in dataset["test"][tei]["conversation"]:
-        mydic.addsent(sent)
-        max_sent_len = max(max_sent_len, len(sent))
-    g_sent = ""
-    for gi in dataset["test"][tei]["goal"]:
-        g_sent = gi[0] + " " + gi[1] + " " + gi[2]
-        mydic.addsent(g_sent)
-    for kl in dataset["test"][tei]["knowledge"]:
-        max_story_size = max(max_story_size, len(dataset["test"][tei]["knowledge"]))
-        tmp_sent = " ".join(kl)
-        mydic.addsent(tmp_sent)
-print("finish building dict")
+    def refine(self, dict_length=10000):
+        if self.totalwords > dict_length:
+            self.word2index = {"<EOS>": 0, "<SOS>": 1, "OOV": 2}
+            self.index2word = {0: "<EOS>", 1: "<SOS>", 2: "OOV"}
+            self.totalwords = 3
+            tmp_lis = sorted([(k, v) for k, v in self.word2num.items()], reverse=True, key=lambda x: x[1])
+            tmp_lis = tmp_lis[:dict_length - 3]
+            for (w, i) in tmp_lis:
+                self.addword(w)
+            assert self.totalwords == dict_length, "word dict should have been refined"
 
 '''
-Story: 32 * 20(max_story_size) * max_sent_len
+Story: 32 * 20(max_num_story) * max_sent_len
 Query: 32 * max_sent_len
 Answer: 32 * max_sent_len
 
-Data_story: train_num * max_story_size * max_sent_len
+Data_story: train_num * max_num_story * max_sent_len
 Data_answer: train_num * max_sent_len
 Data_query:train_num * max_sent_len
 
@@ -102,53 +72,94 @@ Data_query:train_num * max_sent_len
 
 
 class licDataset(data.Dataset):
-    def __init__(self, dataset_dir, memory_size=50, train=True):
+    def __init__(self, dataset_dir, config, train=True):
+        self.mydic = WIdic()
+        dataset = json.load(open(dataset_dir, 'r', encoding='utf-8'))
+        train_num = len(dataset["train"])
+        test_num = len(dataset["test"])
+
+        max_sent_len = 0
+        max_story_len = 0
+        mean_story_len = 0
+        story_num = 0
+        total_story_len = 0
+        max_num_story = 0
+
+        for tri in dataset["train"]:
+            for sent in dataset["train"][tri]["conversation"]:
+                self.mydict.addsent(sent)
+                max_sent_len = max(max_sent_len, len(sent))
+            for kl in dataset["train"][tri]["knowledge"]:
+                max_num_story = max(max_num_story, len(dataset["train"][tri]["knowledge"]))
+                cur_len = len(kl[0]) + len(kl[1]) + len(kl[2]) + 2
+                max_story_len = max(max_story_len, cur_len)
+                story_num += 1
+                total_story_len += cur_len
+                tmp_sent = " ".join(kl)
+                self.mydict.addsent(tmp_sent)
+        mean_story_len = total_story_len / story_num
+
+        for tei in dataset["test"]:
+            for sent in dataset["test"][tei]["history"]:
+                self.mydict.addsent(sent)
+                max_sent_len = max(max_sent_len, len(sent))
+            g_sent = ""
+            for gi in dataset["test"][tei]["goal"]:
+                g_sent = gi[0] + " " + gi[1] + " " + gi[2]
+                self.mydict.addsent(g_sent)
+            for kl in dataset["test"][tei]["knowledge"]:
+                max_num_story = max(max_num_story, len(dataset["test"][tei]["knowledge"]))
+                tmp_sent = " ".join(kl)
+                self.mydict.addsent(tmp_sent)
+        self.mydict.refine()
+        print("*" * 20 + "finish building dict" + "*" * 20)
+
         story = []
         query = []
         answer = []
+        max_sent_length = min(config.max_sentence_len, max_sent_len)
         for i in range(train_num):
             story.append([])
-            for j in range(max_story_size):
+            for j in range(max_num_story):
                 story[i].append([])
-                for k in range(max_sent_len):
+                for k in range(max_sent_length):
                     story[i][j].append(0)
 
         for i in range(train_num):
             query.append([])
-            for k in range(max_sent_len):
+            for k in range(max_sent_length):
                 query[i].append(0)
 
         for i in range(train_num):
             answer.append([])
-            for k in range(max_sent_len):
+            for k in range(max_sent_length):
                 answer[i].append(0)
 
         train_dir = dataset["train"]
         for tri in train_dir:
-            tmp_answer = mydic.W2I(train_dir[tri]["conversation"][2])
-            for l in range(max_sent_len - len(tmp_answer)):
+            tmp_answer = self.mydict.W2I(train_dir[tri]["conversation"][2])
+            for l in range(max_sent_length - len(tmp_answer)):
                 tmp_answer.append(0)
             answer[int(tri)] = tmp_answer
 
-            tmp_query = mydic.W2I(train_dir[tri]["conversation"][1])
-            for l in range(max_sent_len - len(tmp_query)):
+            tmp_query = self.mydict.W2I(train_dir[tri]["conversation"][1])
+            for l in range(max_sent_length - len(tmp_query)):
                 tmp_query.append(0)
             query[int(tri)] = tmp_query
 
             cur_num = len(train_dir[tri]["knowledge"])
             for jth in range(cur_num):
                 tmp_story = " ".join(train_dir[tri]["knowledge"][jth])
-                tmp_story_ids = mydic.W2I(tmp_story)
-                for l in range(max_sent_len - len(tmp_story_ids)):
+                tmp_story_ids = self.mydict.W2I(tmp_story)
+                for l in range(max_sent_length - len(tmp_story_ids)):
                     tmp_story_ids.append(0)
-                story[int(tri)][jth] =tmp_story_ids
+                story[int(tri)][jth] = tmp_story_ids
 
-        self.sentence_size = max_sent_len
-        self.max_story_size = max_story_len
+        self.sentence_size = max_sent_length
+        self.max_story_size = max_story_len         # useless, for print
         self.mean_story_size = mean_story_len
-        self.num_vocab = mydic.totalwords
-
-        self.max_story_size = max_story_size
+        self.num_vocab = self.mydict.totalwords
+        self.max_num_story = max_num_story
 
         self.data_story = torch.LongTensor(story)
         self.data_query = torch.LongTensor(query)
@@ -164,8 +175,7 @@ class licDataset(data.Dataset):
 
 class Trainer():
     def __init__(self, config):
-        # self.train_data = bAbIDataset(config.dataset_dir, config.task)
-        self.train_data = licDataset(config.dataset_dir, config.task)
+        self.train_data = licDataset(config.dataset_dir, config)
         self.train_loader = DataLoader(self.train_data,
                                        batch_size=config.batch_size,
                                        num_workers=1,
@@ -179,17 +189,17 @@ class Trainer():
 
         settings = {
             "use_cuda": config.cuda,
-            "num_vocab": mydic.totalwords,            # "num_vocab": self.train_data.num_vocab,
+            "num_vocab": self.train_data.num_vocab,
             "embedding_dim": 20,
-            "sentence_size": max_sent_len,            # self.train_data.sentence_size,
+            "sentence_size": self.sentence_size,
             "max_hops": config.max_hops
         }
 
-        print("Longest sentence length", self.train_data.sentence_size)
+        print("Longest sentence length", settings["sentence_size"])
         print("Longest story length", self.train_data.max_story_size)
         print("Average story length", self.train_data.mean_story_size)
-        print("Number of vocab", self.train_data.num_vocab)
-        print("largest Number of story", max_story_size)
+        print("Number of vocab", settings["num_vocab"])
+        print("largest Number of story", self.train_data.max_num_story)
 
         self.mem_n2n = MemN2N(settings)
         self.ce_fn = nn.CrossEntropyLoss(size_average=False)
@@ -265,9 +275,9 @@ class Trainer():
 
             tmp = torch.max(tmp_softmax, dim=2)[1]     # dim:sentence_size*batch_size*vocab->sentence_size*batch_size
             print("query: {}\noutput: {}\nground: {}\n"
-                  .format(mydic.I2W(query[0].detach().numpy().tolist()),
-                          mydic.I2W(tmp.transpose(0, 1)[0].detach().numpy().tolist()),
-                          mydic.I2W(answer[0].detach().numpy().tolist())))
+                  .format(self.train_data.mydic.I2W(query[0].detach().numpy().tolist()),
+                          self.train_data.mydic.I2W(tmp.transpose(0, 1)[0].detach().numpy().tolist()),
+                          self.train_data.mydic.I2W(answer[0].detach().numpy().tolist())))
             print("loss:{}".format(loss.data.item()))
 
             self._gradient_noise_and_clip(self.mem_n2n.parameters(), noise_stddev=1e-3, max_clip=config.max_clip)
