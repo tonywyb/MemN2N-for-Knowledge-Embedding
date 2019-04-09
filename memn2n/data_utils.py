@@ -14,7 +14,6 @@ def load_task(data_dir, task_id, only_supporting=False):
     """
     assert task_id > 0 and task_id < 21
 
-    os.chdir("/Users/wangyanbin/Desktop/MemN2N-pytorch/")
     files = os.listdir(data_dir)
     files = [os.path.join(data_dir, f) for f in files]
     s = "qa{}_".format(task_id)
@@ -23,6 +22,7 @@ def load_task(data_dir, task_id, only_supporting=False):
     train_data = get_stories(train_file, only_supporting)
     test_data = get_stories(test_file, only_supporting)
     return train_data, test_data
+
 
 
 def tokenize(sent):

@@ -15,6 +15,7 @@ def parse_config():
     parser.add_argument("--decay_ratio", type=float, default=0.5)
     parser.add_argument("--max_clip", type=float, default=40.0)
     parser.add_argument("--max_sentence_len", type=int, default=30)
+    parser.add_argument("--dataset_option", type=str, default="lic")
 
     return parser.parse_args()
 
