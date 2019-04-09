@@ -61,7 +61,7 @@ class Net(nn.Module):
         self.optimizer = optim_list[config_init['optimizer']](self.parameters(), **config_init['params'])
         self.loss = nn.CrossEntropyLoss(reduction='none')
         self.total_loss = nn.CrossEntropyLoss(reduction='sum')
-        self.mean_loss = nn.CrossEntropyLoss(reduction='elementwise_mean', size_average=False)
+        self.ce_loss = nn.CrossEntropyLoss(size_average=False)
 
     def forward(self, story, query):
         story_size = story.size()
@@ -99,11 +99,11 @@ class Net(nn.Module):
         ## Predict output
         net_out = self(story, query)[0]
         ## Compute training loss
-        loss = self.mean_loss(net_out, target)
+        self.optimizer.zero_grad()
+        loss = self.ce_loss(net_out, target)
         loss.backward()
 
         # Do backprop
-        self.optimizer.zero_grad()
         self._gradient_noise_and_clip(self.parameters(),
                                       noise_stddev=1e-3, max_clip=self.max_clip)
         self.optimizer.step()
