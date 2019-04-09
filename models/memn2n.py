@@ -59,9 +59,11 @@ class Net(nn.Module):
 
         # Optimizer and Losses
         self.optimizer = optim_list[config_init['optimizer']](self.parameters(), **config_init['params'])
-        self.loss = nn.CrossEntropyLoss(reduction='none')
-        self.total_loss = nn.CrossEntropyLoss(reduction='sum')
-        self.ce_loss = nn.CrossEntropyLoss(size_average=False)
+        self.loss = nn.BCELoss(reduction='none')
+        self.total_loss = nn.BCELoss(reduction='sum')
+        # self.ce_loss = nn.CrossEntropyLoss(reduction='mean')
+        self.bce_loss = nn.BCELoss(reduction='elementwise_mean')
+
 
     def forward(self, story, query):
         story_size = story.size()
@@ -97,10 +99,11 @@ class Net(nn.Module):
 
     def fit_batch(self, story, query, target):
         ## Predict output
-        net_out = self(story, query)[0]
+        net_out = self(story, query)[1]
         ## Compute training loss
         self.optimizer.zero_grad()
-        loss = self.ce_loss(net_out, target)
+        # loss = self.ce_loss(net_out, target)
+        loss = self.bce_loss(net_out, target.float())
         loss.backward()
 
         # Do backprop

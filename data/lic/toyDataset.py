@@ -43,7 +43,9 @@ class licDataset(data.Dataset):
 
         self.data_story = torch.LongTensor(story)
         self.data_query = torch.LongTensor(query)
-        self.data_answer = torch.LongTensor(np.argmax(answer, axis=1))
+        answer = answer / np.expand_dims(answer.sum(axis=1), 1)
+        self.data_answer = torch.LongTensor(answer)
+        assert True, "dummy statement for debug"
 
     def __getitem__(self, idx):
         return self.data_story[idx], self.data_query[idx], self.data_answer[idx]
@@ -52,6 +54,6 @@ class licDataset(data.Dataset):
         return len(self.data_story)
 
 
-dataset_dir = "data/lic/train+test.json"
+dataset_dir = "data/lic/train_part.json"
 tr_dataset = licDataset(dataset_dir, train=True)
 te_dataset = licDataset(dataset_dir, train=False)

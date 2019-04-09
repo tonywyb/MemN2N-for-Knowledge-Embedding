@@ -157,11 +157,12 @@ class Trainer:
         for batch_idx, (story, query, target) in enumerate(data_loader):
             story, query, target = story.to(self.device), query.to(self.device), target.to(self.device)
             ## Predict output
-            net_out = self.net(story, query)[0]
+            net_out = self.net(story, query)
             ## Compute loss and accuracy
-            batch_loss = self.net.total_loss(net_out, target).data
+            batch_loss = self.net.total_loss(net_out[1], target.float()).data
             batch_acc, batch_correct, batch_total = self.compute_topK_acc(
-                nn.Softmax(dim=1)(net_out), target, K=self.config['K'])
+                nn.Softmax(dim=1)(net_out[0]), target.max(dim=1)[1], K=self.config['K'])
+            # TODO think of how to get around with it because of multi-label problem
             epoch_loss += batch_loss
             epoch_correct += batch_correct
             epoch_total += batch_total
