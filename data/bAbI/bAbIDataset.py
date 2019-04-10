@@ -48,6 +48,7 @@ class bAbIDataset(data.Dataset):
         self.data_story = torch.LongTensor(story)
         self.data_query = torch.LongTensor(query)
         self.data_answer = torch.LongTensor(np.argmax(answer, axis=1))
+        assert True, "dummy code for debug"
 
     def __getitem__(self, idx):
         return self.data_story[idx], self.data_query[idx], self.data_answer[idx]
@@ -57,5 +58,5 @@ class bAbIDataset(data.Dataset):
 
 
 dataset_dir = "data/bAbI/tasks_1-20_v1-2/en"
-tr_dataset = bAbIDataset(dataset_dir, task_id=3, train=True)
-te_dataset = bAbIDataset(dataset_dir, task_id=3, train=False)
+tr_dataset = bAbIDataset(dataset_dir, task_id=1, train=True)
+te_dataset = bAbIDataset(dataset_dir, task_id=1, train=False)

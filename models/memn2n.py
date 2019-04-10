@@ -4,7 +4,7 @@ import torch.nn as nn
 
 import sys
 sys.path.append('./')
-from utils.misc_utils import optim_list
+from utils.misc_utils import optim_list, loss_list
 
 
 def position_encoding(sentence_size, embedding_dim):
@@ -59,11 +59,8 @@ class Net(nn.Module):
 
         # Optimizer and Losses
         self.optimizer = optim_list[config_init['optimizer']](self.parameters(), **config_init['params'])
-        self.loss = nn.BCELoss(reduction='none')
-        self.total_loss = nn.BCELoss(reduction='sum')
-        # self.ce_loss = nn.CrossEntropyLoss(reduction='mean')
-        self.bce_loss = nn.BCELoss(reduction='elementwise_mean')
-
+        self.total_loss = loss_list[config_init['loss_func']](reduction='sum')
+        self.loss = loss_list[config_init['loss_func']](reduction='elementwise_mean')
 
     def forward(self, story, query):
         story_size = story.size()
@@ -99,11 +96,16 @@ class Net(nn.Module):
 
     def fit_batch(self, story, query, target):
         ## Predict output
-        net_out = self(story, query)[1]
+        if len(target.shape) == 1:          # for bAbI
+            net_out = self(story, query)[0]
+        elif len(target.shape) == 2:        # for lic
+            net_out = self(story, query)[1]
+            target = target
+        else:
+            assert False, "bAbI or lic? pick one to train!"
         ## Compute training loss
         self.optimizer.zero_grad()
-        # loss = self.ce_loss(net_out, target)
-        loss = self.bce_loss(net_out, target.float())
+        loss = self.loss(net_out, target)
         loss.backward()
 
         # Do backprop

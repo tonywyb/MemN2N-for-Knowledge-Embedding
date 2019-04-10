@@ -116,3 +116,8 @@ activation_list = {
     'elu': F.elu,
     'linear': (lambda x: x)
 }
+
+loss_list = {
+    'ce': torch.nn.CrossEntropyLoss,
+    'bce': torch.nn.BCELoss
+}

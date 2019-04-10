@@ -31,6 +31,7 @@ class licDataset(data.Dataset):
         self.sentence_size = max(self.query_size, self.sentence_size) # for the position
         self.sentence_size += 1  # +1 for time words
         self.word_idx = word_idx
+        self.idx_word = dict(zip(self.word_idx.values(), self.word_idx.keys()))
 
         self.mean_story_size = int(np.mean([ len(s) for s, _, _ in data ]))
 
@@ -43,8 +44,8 @@ class licDataset(data.Dataset):
 
         self.data_story = torch.LongTensor(story)
         self.data_query = torch.LongTensor(query)
-        answer = answer / np.expand_dims(answer.sum(axis=1), 1)
-        self.data_answer = torch.LongTensor(answer)
+        # answer = answer / np.expand_dims(answer.sum(axis=1), 1)
+        self.data_answer = torch.FloatTensor(answer)
         assert True, "dummy statement for debug"
 
     def __getitem__(self, idx):

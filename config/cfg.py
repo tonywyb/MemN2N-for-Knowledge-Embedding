@@ -5,7 +5,7 @@ config = {
     'logging': {
         'log_file': 'run.log',                      # log file name
         'fmt': '%(asctime)s: %(message)s',          # logging format
-        'level': 'INFO',                            # logger level
+        'level': 'DEBUG',                           # logger level
     },
 
     # config to load and save networks
@@ -27,6 +27,7 @@ config = {
     'init': {
         'optimizer': 'sgd',                         # {adam, sgd, adamax, adadelta, adagrad, rmsprop}
         'reg_param_l2': 0.0,                        # Coefficient for l2 regularization loss
+        'loss_func': 'ce',                          # loss function during training
         'decay_interval': 25,                       # epoch interval for learning rate decay
         'decay_ratio': 0.5,                         # learning rate decay
         'max_clip': 40.0,                           # gradient noise and clip
@@ -43,21 +44,21 @@ config = {
     'train': {
         'stop_crit':{
             'max_patience': 10,                     # patience for early stopping (int, None)
-            'max_epoch': 50                         # maximum epochs to run for (int)
+            'max_epoch': 10                         # maximum epochs to run for (int)
         },        
-        'batch_size': 32,
+        'batch_size': 1,
         'debug_samples': [3, 37, 54],               # sample ids to debug with (None, int, list)
         'shuffle': True
     },
     # config to control validation
     'valid': {
-        'batch_size': 32,
+        'batch_size': 1,
         'debug_samples': [0, 1, 2],                 # sample ids to debug with (None, int, list)
         'shuffle': False
     },
     # config to control testing
     'test': {
-        'batch_size': 32,
+        'batch_size': 1,
         'debug_samples': [0, 1, 2],                 # sample ids to debug with (None, int, list)
         'shuffle': False
     },

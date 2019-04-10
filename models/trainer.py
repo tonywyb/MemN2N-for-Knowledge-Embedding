@@ -49,6 +49,7 @@ class Trainer:
         self.logger.info(self.net)
 
     def fit(self, tr_loader, val_loader, *args, **kwargs):
+        self.data_loader = tr_loader
         # Initialize params
         if 'max_epoch' in kwargs:
             max_epoch = kwargs['max_epoch']
@@ -82,6 +83,7 @@ class Trainer:
             self.global_records['result'].update({
                 'final_train_loss': epoch_records['loss'],
                 'final_train_acc': epoch_records['acc'],
+                'final_train_F1': epoch_records['F1'],
                 'final_train_epoch': epoch
             })
 
@@ -96,6 +98,7 @@ class Trainer:
                 self.global_records['result'].update({
                     'final_valid_loss': epoch_records['loss'],
                     'final_valid_acc': epoch_records['acc'],
+                    'final_valid_F1': epoch_records['F1'],
                     'final_valid_epoch': epoch
                 })
 
@@ -103,10 +106,12 @@ class Trainer:
                 if epoch_records['loss'] < best_valid_loss:
                     best_valid_loss = epoch_records['loss']
                     best_valid_acc = epoch_records['acc']
+                    best_valid_F1 = epoch_records['F1']
                     best_valid_epoch = epoch
                     self.global_records['result'].update({
                         'best_valid_loss': best_valid_loss,
                         'best_valid_acc': best_valid_acc,
+                        'best_valid_F1': best_valid_F1,
                         'best_valid_epoch': best_valid_epoch
                     })
                     self.logger.info('    Best validation loss improved to {:.03f}'.format(best_valid_loss))
@@ -150,27 +155,41 @@ class Trainer:
         # Evaluate
         epoch_loss = 0.0
         epoch_correct = 0
+        epoch_F1 = 0.0
         epoch_total = 0
         ## Set network mode
         self.net.eval()
         torch.set_grad_enabled(False)
         for batch_idx, (story, query, target) in enumerate(data_loader):
             story, query, target = story.to(self.device), query.to(self.device), target.to(self.device)
+            ### initialize record
+            batch_loss = 0.
+            batch_correct = 0
+            batch_F1 = 0.
+            batch_total = story.shape[0]    # batch_total = batch_size
             ## Predict output
             net_out = self.net(story, query)
             ## Compute loss and accuracy
-            batch_loss = self.net.total_loss(net_out[1], target.float()).data
-            batch_acc, batch_correct, batch_total = self.compute_topK_acc(
-                nn.Softmax(dim=1)(net_out[0]), target.max(dim=1)[1], K=self.config['K'])
-            # TODO think of how to get around with it because of multi-label problem
+            self.logger.debug("Evaluation word output:")
+            if len(target.shape) == 1:              # for bAbI
+                batch_loss = self.net.total_loss(net_out[1], target).data
+                batch_acc, batch_correct = self.compute_topK_acc(
+                    nn.Softmax(dim=1)(net_out[0]), target, K=self.config['K'])
+            elif len(target.shape) == 2:            # for lic
+                self.logger.info("#" * 50)
+                batch_loss = self.net.total_loss(net_out[1], target.float()).data
+                batch_precision, batch_recall, batch_F1 = self.compute_F1(
+                    nn.Softmax(dim=1)(net_out[0]), target)
             epoch_loss += batch_loss
             epoch_correct += batch_correct
             epoch_total += batch_total
+            epoch_F1 += batch_F1
 
         # Return epoch records
         epoch_records = {
             'loss': epoch_loss.data.item() / float(epoch_total),
-            'acc': 100.0 * float(epoch_correct) / float(epoch_total)
+            'acc': 100.0 * float(epoch_correct) / float(epoch_total),
+            'F1': 100.0 * float(epoch_F1) / float(len(data_loader))
         }
         return epoch_records
 
@@ -185,6 +204,7 @@ class Trainer:
         self.global_records['result'].update({
             'loss': epoch_records['loss'],
             'acc': epoch_records['acc'],
+            'F1': epoch_records['F1']
         })
 
     def save_net(self, filename):
@@ -195,20 +215,11 @@ class Trainer:
         self.logger.info('Loading params from {}'.format(filename))
         self.net.load_state_dict(torch.load(filename), strict=False)
 
-    def compute_acc(self, preds, labels):
-        with torch.no_grad():
-            _, predicted = torch.max(preds.data, 1)
-            total = labels.size(0)
-            correct = (predicted == labels).sum().item()
-            return float(correct) / float(total), correct, total
-
     def compute_topK_acc(self, preds, labels, K=1):
-        if K == 1:
-            return self.compute_acc(preds, labels)
         with torch.no_grad():
             # Compute top K predictions
             ord_ind = np.argsort(preds.data, axis=1, kind='mergesort')
-            topK_ind = ord_ind[:, -1:-1 - K:-1]
+            topK_ind = ord_ind[:, -K:]
             preds_topK = np.zeros_like(preds.data)
             for i in range(preds.data.shape[0]):
                 preds_topK[i, topK_ind[i]] = 1
@@ -216,11 +227,46 @@ class Trainer:
             # Compute top K accuracy
             total = labels.size(0)
             correct = np.sum(preds_topK[range(total), labels] > 0.0)
-            return float(correct) / float(total), correct, total
+            return float(correct) / float(total), correct
+
+    def compute_F1(self, preds, labels):
+        with torch.no_grad():
+            # Compute top K predictions
+            ord_ind = np.argsort(preds.data, axis=1, kind='mergesort')
+            batch_size = labels.shape[0]
+            # Compute non-zero element each answer(label) batch
+            labels_topK = labels.numpy()
+            zero_num = (labels_topK != 0).sum(axis=1)
+            preds_topK = np.zeros_like(preds.data)
+            for i in range(preds.data.shape[0]):
+                idx = ord_ind[i, -zero_num[i]:]
+                preds_topK[i, idx] = 1
+            labels_topK = np.flatnonzero(labels_topK)
+            preds_topK = np.flatnonzero(preds_topK)
+            # for tmp in preds_topK:
+            #     try:
+            #         self.logger.debug(self.data_loader.dataset.idx_word[tmp])
+            #     except KeyError as e:
+            #         print(tmp)
+            #         assert False
+            #     finally:
+            #         pass
+            TP = len(np.intersect1d(labels_topK, preds_topK))
+            FN = len(np.setdiff1d(labels_topK, preds_topK))
+            FP = len(np.setdiff1d(preds_topK, labels_topK))
+            precision = float(TP) / float(TP + FP)
+            recall = float(TP) / float(TP + FN)
+            if TP == 0:
+                F1 = 0.
+            else:
+                F1 = 2 * precision * recall / (precision + recall)
+            self.logger.debug("Evaluation result: TP={}, FN={}, FP={}, precision={}, recall={}, F1={}"
+                              .format(TP, FN, FP, precision, recall, F1))
+            return precision, recall, F1
 
     def print_record_dict(self, record_dict, usage, t_taken):
-        self.logger.info('{}: Loss: {:.3f}, Top {} Accuracy: {:.3f}% took {:.3f}s'.format(
-            usage, record_dict['loss'], self.config['K'], record_dict['acc'], t_taken))
+        self.logger.info('{}: Loss: {:.3f}, F1 score: {:.3f}%, Top {} Accuracy: {:.3f}% took {:.3f}s'.format(
+            usage, record_dict['loss'], record_dict['F1'], self.config['K'], record_dict['acc'], t_taken))
 
     def _plot_helper(self):
         plots = {
@@ -240,6 +286,14 @@ class Trainer:
                 'coarse_range': [0, 100],
                 'fine_range': [60, 100]
             },
+            'F1': {
+                'plot_dict': {
+                    'train': get_records('train.F1', self.global_records),
+                    'valid': get_records('valid.F1', self.global_records)
+                },
+                'coarse_range': [0, 100],
+                'fine_range': [60, 100]
+            }
         }
         return plots
 
