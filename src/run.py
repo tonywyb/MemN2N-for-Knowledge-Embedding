@@ -1,5 +1,3 @@
-from utils.customargparse import CustomArgumentParser, args_to_dict
-from utils.misc_utils import create_directory
 import logging
 import sys
 import os
@@ -10,7 +8,8 @@ import importlib.util
 import shutil
 import numpy as np
 sys.path.append('./')
-
+from utils.customargparse import CustomArgumentParser, args_to_dict
+from utils.misc_utils import create_directory
 
 ############################## Main method ###############################
 

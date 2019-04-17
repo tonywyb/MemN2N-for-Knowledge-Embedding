@@ -136,6 +136,7 @@ class Trainer:
                 break
 
     def run_epoch(self, data_loader, mode, epoch, *args, **kwargs):
+        log = self.config['init']['log_interval']
         # Train
         if mode == 'train':
             ## Set network mode
@@ -146,7 +147,6 @@ class Trainer:
                 ## Train on the data batch
                 batch_loss = self.net.fit_batch(story, query, target)
                 # Log stuff
-                log = self.config['init']['log_interval']
                 if batch_idx % log == 0:
                     self.logger.debug('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                         epoch, (batch_idx + 1) * len(story), len(data_loader.dataset),
@@ -176,8 +176,9 @@ class Trainer:
                     nn.Softmax(dim=1)(net_out[0]), target, K=self.config['K'])
             elif len(target.shape) == 2:            # for lic
                 batch_loss = self.net.total_loss(net_out[1], target.float()).data
+                log_flag = True if batch_idx % log == 0 else False
                 batch_precision, batch_recall, batch_F1 = self.compute_F1(
-                    nn.Softmax(dim=1)(net_out[0]), target)
+                    nn.Softmax(dim=1)(net_out[0]), target, log_flag)
             epoch_loss += batch_loss
             epoch_correct += batch_correct
             epoch_total += batch_total
@@ -227,13 +228,13 @@ class Trainer:
             correct = np.sum(preds_topK[range(total), labels] > 0.0)
             return float(correct) / float(total), correct
 
-    def compute_F1(self, preds, labels):
+    def compute_F1(self, preds, labels, log_flag):
         with torch.no_grad():
             # Compute top K predictions
             ord_ind = np.argsort(preds.data, axis=1, kind='mergesort')
             batch_size = labels.shape[0]
             # Compute non-zero element each answer(label) batch
-            labels_topK = labels.numpy()
+            labels_topK = labels.cpu().numpy()
             zero_num = (labels_topK != 0).sum(axis=1)
             preds_topK = np.zeros_like(preds.data)
             for i in range(preds.data.shape[0]):
@@ -253,8 +254,9 @@ class Trainer:
                 F1 = 0.
             else:
                 F1 = 2 * precision * recall / (precision + recall)
-            self.logger.debug("Evaluation result: TP={}, FN={}, FP={}, precision={}, recall={}, F1={}"
-                              .format(TP, FN, FP, precision, recall, F1))
+            if log_flag:
+                self.logger.debug("Evaluation result: TP={}, FN={}, FP={}, precision={}, recall={}, F1={}"
+                                  .format(TP, FN, FP, precision, recall, F1))
             return precision, recall, F1
 
     def print_record_dict(self, record_dict, usage, t_taken):
