@@ -5,26 +5,30 @@ import torch.utils.data as data
 from utils.data_utils import load_task, vectorize_data
 from preprocess.preprocess import pre_process
 from collections import defaultdict
+import codecs
 
 
 class toyDataset(data.Dataset):
     def __init__(self, dataset_dir, memory_size=50, train=True):
         train_data, test_data = pre_process(dataset_dir)
         data = train_data + test_data
-        # self.vocab = set()
-        self.vocab = list()
+        self.vocab = set()
+        # self.vocab = list()
         for story, query, answer in data:
-            # self.vocab = self.vocab | set(list(chain.from_iterable(story))+query+answer)
-            self.vocab = self.vocab + (list(chain.from_iterable(story)) + query + answer)
-        vocab_dict = dict()
-        for v in set(self.vocab):
-            vocab_dict[v] = self.vocab.count(v)
-        vocab_dict = dict(sorted(vocab_dict.items(), key=lambda item: item[1], reverse=True))
-        self.vocab = list(vocab_dict.keys())
-        vocab_len = len(vocab_dict) if len(vocab_dict) <= 9999 else 9999
-        self.vocab = self.vocab[:vocab_len]
-        # self.vocab = sorted(self.vocab)
-        word_idx = defaultdict(int)
+            self.vocab = self.vocab | set(list(chain.from_iterable(story))+query+answer)
+            # self.vocab = self.vocab + (list(chain.from_iterable(story)) + query + answer)
+        # vocab_dict = dict()
+        # for v in set(self.vocab):
+        #     vocab_dict[v] = self.vocab.count(v)
+        # vocab_dict = dict(sorted(vocab_dict.items(), key=lambda item: item[1], reverse=True))
+        # self.vocab = list(vocab_dict.keys())
+        # vocab_len = len(vocab_dict) if len(vocab_dict) <= 9999 else 9999
+        # self.vocab = self.vocab[:vocab_len]
+        # with codecs.open("toylic_word", "w", "utf-8") as f:
+        #     f.write(" ".join(self.vocab))
+        self.vocab = sorted(self.vocab)
+        # word_idx = defaultdict(int)
+        word_idx = {}
         for i, word in enumerate(self.vocab):
             word_idx[word] = i + 1
 
