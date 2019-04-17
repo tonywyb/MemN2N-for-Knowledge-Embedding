@@ -1,14 +1,14 @@
-from torch.utils.data import DataLoader
+# encoding:utf-8
 import torch
 import torch.nn as nn
-import sys
 import os
 import importlib.util
 import time
 import numpy as np
 
+import sys
 sys.path.append('./')
-from utils.misc_utils import get_by_dotted_path, add_record, get_records, log_record_dict, optim_list
+from utils.misc_utils import get_by_dotted_path, add_record, get_records, log_record_dict
 from utils.plot_utils import create_curve_plots
 
 
@@ -170,13 +170,11 @@ class Trainer:
             ## Predict output
             net_out = self.net(story, query)
             ## Compute loss and accuracy
-            self.logger.debug("Evaluation word output:")
             if len(target.shape) == 1:              # for bAbI
                 batch_loss = self.net.total_loss(net_out[1], target).data
                 batch_acc, batch_correct = self.compute_topK_acc(
                     nn.Softmax(dim=1)(net_out[0]), target, K=self.config['K'])
             elif len(target.shape) == 2:            # for lic
-                self.logger.info("#" * 50)
                 batch_loss = self.net.total_loss(net_out[1], target.float()).data
                 batch_precision, batch_recall, batch_F1 = self.compute_F1(
                     nn.Softmax(dim=1)(net_out[0]), target)
@@ -243,14 +241,9 @@ class Trainer:
                 preds_topK[i, idx] = 1
             labels_topK = np.flatnonzero(labels_topK)
             preds_topK = np.flatnonzero(preds_topK)
-            # for tmp in preds_topK:
-            #     try:
-            #         self.logger.debug(self.data_loader.dataset.idx_word[tmp])
-            #     except KeyError as e:
-            #         print(tmp)
-            #         assert False
-            #     finally:
-            #         pass
+            # self.logger.debug("Evaluation word output:")
+            # res = [self.data_loader.dataset.idx_word[t] for t in preds_topK]
+
             TP = len(np.intersect1d(labels_topK, preds_topK))
             FN = len(np.setdiff1d(labels_topK, preds_topK))
             FP = len(np.setdiff1d(preds_topK, labels_topK))

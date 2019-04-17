@@ -7,7 +7,7 @@ from six.moves import range
 from preprocess.preprocess import pre_process
 
 
-class licDataset(data.Dataset):
+class toyDataset(data.Dataset):
     def __init__(self, dataset_dir, memory_size=50, train=True):
         train_data, test_data = pre_process(dataset_dir)
         data = train_data + test_data
@@ -23,15 +23,16 @@ class licDataset(data.Dataset):
             chain.from_iterable([story for story, _, _ in data])])
         self.memory_size = min(memory_size, self.max_story_size)
 
-        # Add time words/indexes
-        for i in range(self.memory_size):
-            word_idx["time{}".format(i+1)] = "time{}".format(i+1)
+        # # Add time words/indexes
+        # for i in range(self.memory_size):
+        #     word_idx["time{}".format(i+1)] = "time{}".format(i+1)
 
         self.num_vocab = len(word_idx) + 1 # +1 for nil word
         self.sentence_size = max(self.query_size, self.sentence_size) # for the position
         self.sentence_size += 1  # +1 for time words
         self.word_idx = word_idx
         self.idx_word = dict(zip(self.word_idx.values(), self.word_idx.keys()))
+        self.idx_word[0] = "OOV"
 
         self.mean_story_size = int(np.mean([ len(s) for s, _, _ in data ]))
 
@@ -56,5 +57,5 @@ class licDataset(data.Dataset):
 
 
 dataset_dir = "data/lic/train_part.json"
-tr_dataset = licDataset(dataset_dir, train=True)
-te_dataset = licDataset(dataset_dir, train=False)
+tr_dataset = toyDataset(dataset_dir, train=True)
+te_dataset = toyDataset(dataset_dir, train=False)
