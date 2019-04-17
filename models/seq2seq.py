@@ -10,7 +10,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import random
 import json
-# import os
 
 
 learning_rate = 0.01
