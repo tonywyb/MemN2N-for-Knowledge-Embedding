@@ -34,7 +34,7 @@ config = {
         'max_clip': 40.0,                           # gradient noise and clip
         'max_hops': 3,                              # hops of memory network
         'embedding_dim': 20,                        # query/memory embedding in memory network
-        'log_interval': 100,                        # Logging interval for debugging (None, int)
+        'log_interval': 500,                        # Logging interval for debugging (None, int)
         'params': {
             'lr': 1e-2,                             # Learning rate: float
             'momentum': 0.0                         # Momentum: float in [0.0, 1.0]

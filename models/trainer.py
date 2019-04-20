@@ -195,6 +195,19 @@ class Trainer:
                 batch_precision, batch_recall, batch_F1 = self.compute_F1(
                     nn.Softmax(dim=1)(net_out[0]), target, log_flag, -1)
 
+                idx_word = self.data_loader.dataset.idx_word
+
+                def print_sent(idx, idx_word):
+                    idx = idx.tolist()
+                    res = [idx_word[i] for i in idx]
+                    res = list(set(res))
+                    return res
+
+                if log_flag:
+                    print("Key word extraction for sentence \'{}\'".format(print_sent(query[0, :].numpy(), idx_word)))
+                    for ith in range(rule_out.shape[1]):
+                        print("{} hop rule output:{}".format(ith + 1, print_sent(rule_out[0, ith, :], idx_word)))
+
                 def process_rule(rule_out):
                     res = []
                     for ith in range(rule_out.shape[1]):
@@ -210,6 +223,7 @@ class Trainer:
                 for ith, rule_res in enumerate(rule_out_lis):
                     rule_precision, rule_recall, batch_rule_F1[ith] = self.compute_F1(
                         rule_res, target, log_flag, ith + 1)
+
             epoch_loss += batch_loss
             epoch_correct += batch_correct
             epoch_F1 += batch_F1
@@ -276,10 +290,15 @@ class Trainer:
             for i in range(preds.data.shape[0]):
                 idx = ord_ind[i, -zero_num[i]:]
                 preds_topK[i, idx] = 1
+
+            if log_flag and rule_hops == -1:
+                print("MemN2N output:")
+                tmp = np.flatnonzero(preds_topK[0])
+                res = [self.data_loader.dataset.idx_word[t] for t in tmp]
+                print(res)
+
             labels_topK = np.flatnonzero(labels_topK)
             preds_topK = np.flatnonzero(preds_topK)
-            # self.logger.debug("Evaluation word output:")
-            # res = [self.data_loader.dataset.idx_word[t] for t in preds_topK]
 
             TP = len(np.intersect1d(labels_topK, preds_topK))
             FN = len(np.setdiff1d(labels_topK, preds_topK))
