@@ -72,15 +72,15 @@ def run(config, logger):
         val_loader = None
 
     # Import model
-
     spec = importlib.util.spec_from_file_location('model', config['modelfile'])
     model_mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(model_mod)
-    model = model_mod.Model(device, logger, global_records, config,
-                            num_vocab=data_mod.tr_dataset.num_vocab, sentence_size=data_mod.tr_dataset.sentence_size)
 
     # Train mode
     if config['mode'] == 'train':
+        model = model_mod.Model(device, logger, global_records, config,
+                                num_vocab=data_mod.tr_dataset.num_vocab,
+                                sentence_size=data_mod.tr_dataset.sentence_size)
         # Train model
         tic = time.time()
         results = model.fit(tr_loader, val_loader)
@@ -92,14 +92,21 @@ def run(config, logger):
 
     # Eval mode
     elif config['mode'] == 'eval':
+        data_set = None
         # Decide data usage
         assert cfg_eval['usage'] in ['train', 'valid', 'test'], 'usage should be one of [train, valid, test]'
         if cfg_eval['usage'] == 'train':
             data_loader = tr_loader
+            data_set = data_mod.tr_dataset
         elif cfg_eval['usage'] == 'test':
             data_loader = te_loader
+            data_set = data_mod.te_dataset
         elif cfg_eval['usage'] == 'valid':
             data_loader = val_loader
+            data_set = data_mod.val_dataset
+        model = model_mod.Model(device, logger, global_records, config,
+                                num_vocab=data_set.num_vocab,
+                                sentence_size=data_set.sentence_size)
 
         # Evaluate on data
         tic = time.time()

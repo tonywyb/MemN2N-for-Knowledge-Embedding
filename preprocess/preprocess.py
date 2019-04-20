@@ -25,14 +25,20 @@ def pre_process(filename="data/lic/train+test.json"):
                     if cnt == 0:
                         tmp2 = dict["train"][tri]["conversation"][0].strip().split(" ")\
                                                + dict["train"][tri]["conversation"][1].strip().split(" ")
-                        tmp3 = list(
-                            filter(lambda t: t in kg_word,
-                                   dict["train"][tri]["conversation"][2].strip().split(" ")))
+                        if res_cnt >= train_num:
+                            tmp3 = dict["train"][tri]["conversation"][2].strip().split(" ")
+                        else:
+                            tmp3 = list(
+                                filter(lambda t: t in kg_word,
+                                       dict["train"][tri]["conversation"][2].strip().split(" ")))
                     else:
                         tmp2 = dict["train"][tri]["conversation"][2 * cnt + 1].strip().split(" ")
-                        tmp3 = list(
-                            filter(lambda t: t in kg_word,
-                                   dict["train"][tri]["conversation"][2 * cnt + 2].strip().split(" ")))
+                        if res_cnt >= train_num:
+                            tmp3 = dict["train"][tri]["conversation"][2 * cnt + 2].strip().split(" ")
+                        else:
+                            tmp3 = list(
+                                filter(lambda t: t in kg_word,
+                                       dict["train"][tri]["conversation"][2 * cnt + 2].strip().split(" ")))
                     if len(tmp3) == 0:
                         continue
                     res_lis.append([])
@@ -73,26 +79,22 @@ def pre_process(filename="data/lic/train+test.json"):
                             filter(lambda t: t in kg_word,
                                    dict["train"][tri]["conversation"][2 * cnt + 2].strip().split(" ")))
                     tr_cnt += 1
-            # for tei in dict["test"]:
-            #     kg = get_knowledge_lis(dict["test"][tei]["knowledge"])
-            #     cur_len = 1 + (len(dict["test"][tei]["conversation"]) - 3) // 2
-            #     for cnt in range(cur_len):
-            #         te_lis.append([])
-            #         for t in range(3):
-            #             te_lis[te_cnt].append([])
-            #         te_lis[te_cnt][0] = kg
-            #         if cnt == 0:
-            #             te_lis[te_cnt][1] = dict["test"][tei]["conversation"][0].strip().split(" ")\
-            #                                    + dict["test"][tei]["conversation"][1].strip().split(" ")
-            #             te_lis[te_cnt][2] = list(
-            #                 filter(lambda t: t not in toy_nil_word,
-            #                        dict["test"][tei]["conversation"][2].strip().split(" ")))
-            #         else:
-            #             te_lis[te_cnt][1] = dict["test"][tei]["conversation"][2 * cnt + 1].strip().split(" ")
-            #             te_lis[te_cnt][2] = list(
-            #                 filter(lambda t: t not in toy_nil_word,
-            #                        dict["test"][tei]["conversation"][2 * cnt + 2].strip().split(" ")))
-            #         te_cnt += 1
+            for tei in dict["test"]:
+                kg = get_knowledge_lis(dict["test"][tei]["knowledge"])
+                cur_len = 1 + (len(dict["test"][tei]["conversation"]) - 3) // 2
+                for cnt in range(cur_len):
+                    te_lis.append([])
+                    for t in range(3):
+                        te_lis[te_cnt].append([])
+                    te_lis[te_cnt][0] = kg
+                    if cnt == 0:
+                        te_lis[te_cnt][1] = dict["test"][tei]["conversation"][0].strip().split(" ")\
+                                               + dict["test"][tei]["conversation"][1].strip().split(" ")
+                        te_lis[te_cnt][2] = dict["test"][tei]["conversation"][2].strip().split(" ")
+                    else:
+                        te_lis[te_cnt][1] = dict["test"][tei]["conversation"][2 * cnt + 1].strip().split(" ")
+                        te_lis[te_cnt][2] = dict["test"][tei]["conversation"][2 * cnt + 2].strip().split(" ")
+                    te_cnt += 1
         return tr_lis, te_lis
     else:
         assert False, "lic only has 2 datasets! pick one!"

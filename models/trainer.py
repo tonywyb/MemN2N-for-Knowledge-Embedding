@@ -10,6 +10,7 @@ import sys
 sys.path.append('./')
 from utils.misc_utils import get_by_dotted_path, add_record, get_records, log_record_dict
 from utils.plot_utils import create_curve_plots
+from models.rule import RuleExtractor
 
 
 '''
@@ -41,6 +42,7 @@ class Trainer:
         self.net = net_mod.Net(self.device, self.logger, self.config['init'],
                                num_vocab=kwargs["num_vocab"],
                                sentence_size=kwargs["sentence_size"])
+        self.rule = RuleExtractor(self.device, self.logger, self.config['init'])
         # Then load its params if available
         if self.config['net'].get('saved_params_path', None) is not None:
             self.load_net(self.config['net']['saved_params_path'])
@@ -84,6 +86,8 @@ class Trainer:
                 'final_train_loss': epoch_records['loss'],
                 'final_train_acc': epoch_records['acc'],
                 'final_train_F1': epoch_records['F1'],
+                'final_train_Rule_F1_1_hop': epoch_records['Rule_F1_1_hop'],
+                'final_train_Rule_F1_2_hops': epoch_records['Rule_F1_2_hops'],
                 'final_train_epoch': epoch
             })
 
@@ -99,6 +103,8 @@ class Trainer:
                     'final_valid_loss': epoch_records['loss'],
                     'final_valid_acc': epoch_records['acc'],
                     'final_valid_F1': epoch_records['F1'],
+                    'final_valid_Rule_F1_1_hop': epoch_records['Rule_F1_1_hop'],
+                    'final_valid_Rule_F1_2_hops': epoch_records['Rule_F1_2_hops'],
                     'final_valid_epoch': epoch
                 })
 
@@ -107,11 +113,15 @@ class Trainer:
                     best_valid_loss = epoch_records['loss']
                     best_valid_acc = epoch_records['acc']
                     best_valid_F1 = epoch_records['F1']
+                    best_valid_Rule_F1_1_hop = epoch_records['Rule_F1_1_hop']
+                    best_valid_Rule_F1_2_hops = epoch_records['Rule_F1_2_hops']
                     best_valid_epoch = epoch
                     self.global_records['result'].update({
                         'best_valid_loss': best_valid_loss,
                         'best_valid_acc': best_valid_acc,
                         'best_valid_F1': best_valid_F1,
+                        'best_valid_Rule_F1_1_hop': best_valid_Rule_F1_1_hop,
+                        'best_valid_Rule_F1_2_hops': best_valid_Rule_F1_2_hops,
                         'best_valid_epoch': best_valid_epoch
                     })
                     self.logger.info('    Best validation loss improved to {:.03f}'.format(best_valid_loss))
@@ -156,6 +166,7 @@ class Trainer:
         epoch_loss = 0.0
         epoch_correct = 0
         epoch_F1 = 0.0
+        epoch_rule_F1 = np.zeros((len(self.config['init']['rule_hops'])))
         epoch_total = 0
         ## Set network mode
         self.net.eval()
@@ -169,6 +180,10 @@ class Trainer:
             batch_total = story.shape[0]    # batch_total = batch_size
             ## Predict output
             net_out = self.net(story, query)
+            rule_out = self.rule.extract(story.cpu().numpy(), query.cpu().numpy(),
+                                         np.zeros((story.shape[0], 1), dtype=np.int).tolist())
+            batch_rule_F1 = np.zeros((len(self.config['init']['rule_hops'])))
+            # rule_out = self.random_choose(story, query)
             ## Compute loss and accuracy
             if len(target.shape) == 1:              # for bAbI
                 batch_loss = self.net.total_loss(net_out[1], target).data
@@ -178,17 +193,37 @@ class Trainer:
                 batch_loss = self.net.total_loss(net_out[1], target.float()).data
                 log_flag = True if batch_idx % log == 0 else False
                 batch_precision, batch_recall, batch_F1 = self.compute_F1(
-                    nn.Softmax(dim=1)(net_out[0]), target, log_flag)
+                    nn.Softmax(dim=1)(net_out[0]), target, log_flag, -1)
+
+                def process_rule(rule_out):
+                    res = []
+                    for ith in range(rule_out.shape[1]):
+                        ans = torch.zeros_like(target)
+                        for bs in range(rule_out.shape[0]):
+                            for r in rule_out[bs, ith, :]:
+                                if r != 0:
+                                    ans[bs, int(r)] = 1
+                        res.append(ans)
+                    return res
+
+                rule_out_lis = process_rule(rule_out)
+                for ith, rule_res in enumerate(rule_out_lis):
+                    rule_precision, rule_recall, batch_rule_F1[ith] = self.compute_F1(
+                        rule_res, target, log_flag, ith + 1)
             epoch_loss += batch_loss
             epoch_correct += batch_correct
-            epoch_total += batch_total
             epoch_F1 += batch_F1
+            epoch_rule_F1 += batch_rule_F1
+            epoch_total += batch_total
 
+        epoch_rule_F1 = epoch_rule_F1.tolist()
         # Return epoch records
         epoch_records = {
             'loss': epoch_loss.data.item() / float(epoch_total),
             'acc': 100.0 * float(epoch_correct) / float(epoch_total),
-            'F1': 100.0 * float(epoch_F1) / float(len(data_loader))
+            'F1': 100.0 * float(epoch_F1) / float(len(data_loader)),
+            'Rule_F1_1_hop': 100.0 * float(epoch_rule_F1[0]) / float(len(data_loader)),
+            'Rule_F1_2_hops': 100.0 * float(epoch_rule_F1[1]) / float(len(data_loader)),
         }
         return epoch_records
 
@@ -203,7 +238,9 @@ class Trainer:
         self.global_records['result'].update({
             'loss': epoch_records['loss'],
             'acc': epoch_records['acc'],
-            'F1': epoch_records['F1']
+            'F1': epoch_records['F1'],
+            'Rule_F1_1_hop': epoch_records['Rule_F1_1_hop'],
+            'Rule_F1_2_hops': epoch_records['Rule_F1_1_hop'],
         })
 
     def save_net(self, filename):
@@ -228,11 +265,10 @@ class Trainer:
             correct = np.sum(preds_topK[range(total), labels] > 0.0)
             return float(correct) / float(total), correct
 
-    def compute_F1(self, preds, labels, log_flag):
+    def compute_F1(self, preds, labels, log_flag, rule_hops):
         with torch.no_grad():
             # Compute top K predictions
             ord_ind = np.argsort(preds.data, axis=1, kind='mergesort')
-            batch_size = labels.shape[0]
             # Compute non-zero element each answer(label) batch
             labels_topK = labels.cpu().numpy()
             zero_num = (labels_topK != 0).sum(axis=1)
@@ -255,13 +291,16 @@ class Trainer:
             else:
                 F1 = 2 * precision * recall / (precision + recall)
             if log_flag:
-                self.logger.debug("Evaluation result: TP={}, FN={}, FP={}, precision={}, recall={}, F1={}"
+                prefix = "" if rule_hops == -1 else "Rule hops " + str(rule_hops) + ":"
+                self.logger.debug(prefix + "TP={}, FN={}, FP={}, precision={}, recall={}, F1={}"
                                   .format(TP, FN, FP, precision, recall, F1))
             return precision, recall, F1
 
     def print_record_dict(self, record_dict, usage, t_taken):
-        self.logger.info('{}: Loss: {:.3f}, F1 score: {:.3f}%, Top {} Accuracy: {:.3f}% took {:.3f}s'.format(
-            usage, record_dict['loss'], record_dict['F1'], self.config['K'], record_dict['acc'], t_taken))
+        self.logger.info('{}: Loss: {:.3f}, F1 score: {:.3f}%, Rule_F1_1_hop score: {:.3f}%,'
+                         ' Rule_F1_2_hops score: {:.3f}%, Top {} Accuracy: {:.3f}% took {:.3f}s'
+                         .format(usage, record_dict['loss'], record_dict['F1'], record_dict['Rule_F1_1_hop'],
+                                 record_dict['Rule_F1_2_hops'], self.config['K'], record_dict['acc'], t_taken))
 
     def _plot_helper(self):
         plots = {
@@ -270,8 +309,8 @@ class Trainer:
                     'train': get_records('train.loss', self.global_records),
                     'valid': get_records('valid.loss', self.global_records)
                 },
-                'coarse_range': [0, 1],
-                'fine_range': [0, 0.2]
+                'coarse_range': [0, 200],
+                'fine_range': [0, 50]
             },
             'acc': {
                 'plot_dict': {
@@ -284,7 +323,11 @@ class Trainer:
             'F1': {
                 'plot_dict': {
                     'train': get_records('train.F1', self.global_records),
-                    'valid': get_records('valid.F1', self.global_records)
+                    'valid': get_records('valid.F1', self.global_records),
+                    'Rule_F1_1_hop_train': get_records('train.Rule_F1_1_hop', self.global_records),
+                    'Rule_F1_1_hop_valid': get_records('valid.Rule_F1_1_hop', self.global_records),
+                    'Rule_F1_2_hops_train': get_records('train.Rule_F1_2_hops', self.global_records),
+                    'Rule_F1_2_hops_valid': get_records('valid.Rule_F1_2_hops', self.global_records)
                 },
                 'coarse_range': [0, 100],
                 'fine_range': [60, 100]

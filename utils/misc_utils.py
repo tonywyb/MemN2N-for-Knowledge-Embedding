@@ -119,5 +119,6 @@ activation_list = {
 
 loss_list = {
     'ce': torch.nn.CrossEntropyLoss,
-    'bce': torch.nn.BCELoss
+    'bce': torch.nn.BCELoss,
+    'mse': torch.nn.MSELoss
 }

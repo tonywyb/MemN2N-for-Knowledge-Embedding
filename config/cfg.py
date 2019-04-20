@@ -10,7 +10,7 @@ config = {
 
     # config to load and save networks
     'net': {
-        'net_path': 'memn2n/memn2n.py',             # path to load network from
+        'net_path': 'models/memn2n.py',             # path to load network from
         'saved_params_path': None                   # path to load saved weights in a loaded network
     },
 
@@ -25,6 +25,7 @@ config = {
 
     # config to initialize net
     'init': {
+        'rule_hops': [1, 2],                        # Number of hops when randomly choosing kg
         'optimizer': 'sgd',                         # {adam, sgd, adamax, adadelta, adagrad, rmsprop}
         'reg_param_l2': 0.0,                        # Coefficient for l2 regularization loss
         'loss_func': 'ce',                          # loss function during training
