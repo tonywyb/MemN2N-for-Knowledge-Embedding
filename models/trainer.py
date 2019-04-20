@@ -270,8 +270,8 @@ class Trainer:
                     'train': get_records('train.loss', self.global_records),
                     'valid': get_records('valid.loss', self.global_records)
                 },
-                'coarse_range': [0, 20],
-                'fine_range': [0, 4]
+                'coarse_range': [0, 1],
+                'fine_range': [0, 0.2]
             },
             'acc': {
                 'plot_dict': {

@@ -3,13 +3,14 @@ import numpy as np
 import torch
 import torch.utils.data as data
 from utils.data_utils import load_task, vectorize_data
-from preprocess.preprocess import pre_process
+from preprocess.preprocess import pre_process, extract_knowledge
 from collections import defaultdict
 import codecs
 
 
 class toyDataset(data.Dataset):
     def __init__(self, dataset_dir, memory_size=50, train=True):
+        extract_knowledge(dataset_dir)
         train_data, test_data = pre_process(dataset_dir)
         data = train_data + test_data
         self.vocab = set()
