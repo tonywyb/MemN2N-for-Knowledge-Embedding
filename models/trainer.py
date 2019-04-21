@@ -50,6 +50,8 @@ class Trainer:
         self.net.to(self.device)
         self.logger.info(self.net)
 
+        self.data_loader = None
+
     def fit(self, tr_loader, val_loader, *args, **kwargs):
         self.data_loader = tr_loader
         # Initialize params
@@ -192,9 +194,6 @@ class Trainer:
             elif len(target.shape) == 2:            # for lic
                 batch_loss = self.net.total_loss(net_out[1], target.float()).data
                 log_flag = True if batch_idx % log == 0 else False
-                batch_precision, batch_recall, batch_F1 = self.compute_F1(
-                    nn.Softmax(dim=1)(net_out[0]), target, log_flag, -1)
-
                 idx_word = self.data_loader.dataset.idx_word
 
                 def print_sent(idx, idx_word):
@@ -204,9 +203,13 @@ class Trainer:
                     return res
 
                 if log_flag:
-                    print("Key word extraction for sentence \'{}\'".format(print_sent(query[0, :].numpy(), idx_word)))
+                    print("Key word extraction for sentence \'{}\'".format(
+                        print_sent(query[0, :].cpu().numpy(), idx_word)))
                     for ith in range(rule_out.shape[1]):
                         print("{} hop rule output:{}".format(ith + 1, print_sent(rule_out[0, ith, :], idx_word)))
+
+                batch_precision, batch_recall, batch_F1 = self.compute_F1(
+                    nn.Softmax(dim=1)(net_out[0]), target, log_flag, -1)
 
                 def process_rule(rule_out):
                     res = []
