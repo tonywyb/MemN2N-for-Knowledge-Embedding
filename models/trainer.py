@@ -194,7 +194,7 @@ class Trainer:
             elif len(target.shape) == 2:            # for lic
                 batch_loss = self.net.total_loss(net_out[1], target.float()).data
                 log_flag = True if batch_idx % log == 0 else False
-                idx_word = self.data_loader.dataset.idx_word
+                idx_word = data_loader.dataset.idx_word
 
                 def print_sent(idx, idx_word):
                     idx = idx.tolist()

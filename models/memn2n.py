@@ -15,8 +15,8 @@ def position_encoding(sentence_size, embedding_dim):
         for j in range(1, ls):
             encoding[i - 1, j - 1] = (i - (embedding_dim + 1) / 2) * (j - (sentence_size + 1) / 2)
     encoding = 1 + 4 * encoding / embedding_dim / sentence_size
-    # Make position encoding of time words identity to avoid modifying them
-    encoding[:, -1] = 1.0
+    # # Make position encoding of time words identity to avoid modifying them
+    # encoding[:, -1] = 1.0
     return np.transpose(encoding)
 
 
