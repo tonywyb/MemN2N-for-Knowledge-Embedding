@@ -1,15 +1,15 @@
 # encoding: utf-8
 from __future__ import unicode_literals
 import json
-import codecs
 import pickle as pkl
 from itertools import chain
+import os
 
 
 def pre_process(filename="data/lic/train+test.json"):
-    with open("data/lic/knowledge.pkl", "rb") as f:
-        kg_word = pkl.load(f)
     if filename == "data/lic/train+test.json":
+        with open("data/lic/knowledge.pkl", "rb") as f:
+            kg_word = pkl.load(f)
         # with codecs.open("data/lic/filter_200.txt", "r", "utf-8") as f:
         #     nil_word = f.read().strip().split(" ")
         with open(filename, "rb") as f:
@@ -50,6 +50,8 @@ def pre_process(filename="data/lic/train+test.json"):
                     res_cnt += 1
         return res_lis[:train_num], res_lis[train_num:]
     elif filename == "data/lic/train_part.json":
+        with open("data/lic/toy_knowledge.pkl", "rb") as f:
+            kg_word = pkl.load(f)
         # with codecs.open("data/lic/toy_filter_200.txt", "r", "utf-8") as f:
         #     toy_nil_word = f.read().strip().split(" ")
         with open(filename, "rb") as f:
@@ -112,6 +114,8 @@ def get_knowledge_lis(lis):
 def extract_knowledge(filename="data/lic/train+test.json"):
     all_kg = []
     if filename == "data/lic/train+test.json":
+        if os.path.exists("data/lic/knowledge.pkl"):
+            return
         with open(filename, "rb") as f:
             dict = json.loads(f.read())
             for tri in dict["train"]:
@@ -120,13 +124,15 @@ def extract_knowledge(filename="data/lic/train+test.json"):
             all_kg = list(set(chain.from_iterable(all_kg)))
             pkl.dump(all_kg, open("data/lic/knowledge.pkl", "wb"))
     elif filename == "data/lic/train_part.json":
+        if os.path.exists("data/lic/toy_knowledge.pkl"):
+            return
         with open(filename, "rb") as f:
             dict = json.loads(f.read())
             for tri in dict["train"]:
                 kg = get_knowledge_lis(dict["train"][tri]["knowledge"])
                 all_kg += kg
             all_kg = list(set(chain.from_iterable(all_kg)))
-            pkl.dump(all_kg, open("data/lic/knowledge.pkl", "wb"))
+            pkl.dump(all_kg, open("data/lic/toy_knowledge.pkl", "wb"))
     else:
         assert False, "lic only has 2 datasets! pick one!"
 

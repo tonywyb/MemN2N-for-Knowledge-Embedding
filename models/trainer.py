@@ -202,11 +202,14 @@ class Trainer:
                     res = list(set(res))
                     return res
 
-                if log_flag:
-                    print("Key word extraction for sentence \'{}\'".format(
-                        print_sent(query[0, :].cpu().numpy(), idx_word)))
-                    for ith in range(rule_out.shape[1]):
-                        print("{} hop rule output:{}".format(ith + 1, print_sent(rule_out[0, ith, :], idx_word)))
+                # if log_flag:
+                #     tmp = "Key word extraction for sentence \'{}\'"\
+                #         .format(print_sent(query[0, :].cpu().numpy(), idx_word)).encode('gbk')
+                #     self.logger.debug(tmp)
+                #     for ith in range(rule_out.shape[1]):
+                #         tmp = "{} hop rule output:{}".format(ith + 1, print_sent(rule_out[0, ith, :], idx_word))\
+                #             .encode('gbk')
+                #         self.logger.debug(tmp)
 
                 batch_precision, batch_recall, batch_F1 = self.compute_F1(
                     nn.Softmax(dim=1)(net_out[0]), target, log_flag, -1)
@@ -266,7 +269,8 @@ class Trainer:
 
     def load_net(self, filename):
         self.logger.info('Loading params from {}'.format(filename))
-        self.net.load_state_dict(torch.load(filename), strict=False)
+        # self.net.load_state_dict(torch.load(filename), strict=False)
+        self.net.load_state_dict(torch.load(filename))
 
     def compute_topK_acc(self, preds, labels, K=1):
         with torch.no_grad():
@@ -294,11 +298,12 @@ class Trainer:
                 idx = ord_ind[i, -zero_num[i]:]
                 preds_topK[i, idx] = 1
 
-            if log_flag and rule_hops == -1:
-                print("MemN2N output:")
-                tmp = np.flatnonzero(preds_topK[0])
-                res = [self.data_loader.dataset.idx_word[t] for t in tmp]
-                print(res)
+            # if log_flag and rule_hops == -1:
+            #     self.logger.debug("MemN2N output:")
+            #     tmp = np.flatnonzero(preds_topK[0])
+            #     res = [self.data_loader.dataset.idx_word[t] for t in tmp]
+            #     res = " ".join(res).encode("gbk")
+            #     self.logger.debug(res)
 
             labels_topK = np.flatnonzero(labels_topK)
             preds_topK = np.flatnonzero(preds_topK)

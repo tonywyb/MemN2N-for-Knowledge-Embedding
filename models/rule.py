@@ -89,7 +89,7 @@ if __name__ == "__main__":
         else:
             device = torch.device('cpu')
 
-    dataset_dir = "data/lic/train_part.json"
+    dataset_dir = "data/lic/"
     te_dataset = toyDataset(dataset_dir, train=False)
 
     # Import data and create data loaders

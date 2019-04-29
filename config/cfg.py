@@ -45,7 +45,7 @@ config = {
     'train': {
         'stop_crit':{
             'max_patience': 10,                     # patience for early stopping (int, None)
-            'max_epoch': 50                         # maximum epochs to run for (int)
+            'max_epoch': 20                         # maximum epochs to run for (int)
         },        
         'batch_size': 1,
         'debug_samples': [3, 37, 54],               # sample ids to debug with (None, int, list)

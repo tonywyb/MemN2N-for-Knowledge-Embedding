@@ -1,37 +1,46 @@
 from itertools import chain
+from collections import defaultdict
 import numpy as np
 import torch
 import torch.utils.data as data
 from utils.data_utils import load_task, vectorize_data
 from preprocess.preprocess import pre_process, extract_knowledge
-from collections import defaultdict
 import codecs
+import os
 
 
 class toyDataset(data.Dataset):
     def __init__(self, dataset_dir, memory_size=50, train=True):
-        extract_knowledge(dataset_dir)
-        train_data, test_data = pre_process(dataset_dir)
+        data_path = os.path.join(dataset_dir, "train_part.json")
+        dict_path = os.path.join(dataset_dir, "toylic_word")
+        extract_knowledge(data_path)
+        train_data, test_data = pre_process(data_path)
         data = train_data + test_data
-        self.vocab = set()
-        # self.vocab = list()
-        for story, query, answer in data:
-            self.vocab = self.vocab | set(list(chain.from_iterable(story))+query+answer)
-            # self.vocab = self.vocab + (list(chain.from_iterable(story)) + query + answer)
-        # vocab_dict = dict()
-        # for v in set(self.vocab):
-        #     vocab_dict[v] = self.vocab.count(v)
-        # vocab_dict = dict(sorted(vocab_dict.items(), key=lambda item: item[1], reverse=True))
-        # self.vocab = list(vocab_dict.keys())
-        # vocab_len = len(vocab_dict) if len(vocab_dict) <= 9999 else 9999
-        # self.vocab = self.vocab[:vocab_len]
-        # with codecs.open("toylic_word", "w", "utf-8") as f:
-        #     f.write(" ".join(self.vocab))
-        self.vocab = sorted(self.vocab)
+
+        if not os.path.exists(dict_path):
+            # self.vocab = set()
+            self.vocab = list()
+            for story, query, answer in data:
+                # self.vocab = self.vocab | set(list(chain.from_iterable(story))+query+answer)
+                self.vocab = self.vocab + (list(chain.from_iterable(story)) + query + answer)
+            vocab_dict = dict()
+            for v in set(self.vocab):
+                vocab_dict[v] = self.vocab.count(v)
+            vocab_dict = dict(sorted(vocab_dict.items(), key=lambda item: item[1], reverse=True))
+            self.vocab = list(vocab_dict.keys())
+            vocab_len = len(vocab_dict) if len(vocab_dict) <= 9999 else 9999
+            self.vocab = self.vocab[:vocab_len]
+            # self.vocab = sorted(self.vocab)
+            with codecs.open("data/lic/toylic_word", "w", "utf-8") as f:
+                f.write(" ".join(self.vocab))
+        else:
+            with codecs.open("data/lic/toylic_word", "r", "utf-8") as f:
+                self.vocab = f.read().strip().split(" ")
+
         # word_idx = defaultdict(int)
         word_idx = {}
-        for i, word in enumerate(self.vocab):
-            word_idx[word] = i + 1
+        for i, word in enumerate(self.vocab, 2):
+            word_idx[word] = i
 
         self.max_story_size = max([len(story) for story, _, _ in data])
         self.query_size = max([len(query) for _, query, _ in data])
@@ -43,12 +52,13 @@ class toyDataset(data.Dataset):
         # for i in range(self.memory_size):
         #     word_idx["time{}".format(i+1)] = "time{}".format(i+1)
 
-        self.num_vocab = len(word_idx) + 1 # +1 for nil word
+        self.num_vocab = len(word_idx) + 2 # +2 for nil word
         self.sentence_size = max(self.query_size, self.sentence_size) # for the position
         self.sentence_size += 1  # +1 for time words
         self.word_idx = word_idx
         self.idx_word = dict(zip(self.word_idx.values(), self.word_idx.keys()))
-        self.idx_word[0] = "OOV"
+        self.idx_word[0] = "<pad>"
+        self.idx_word[1] = "<unk>"
 
         self.mean_story_size = int(np.mean([len(s) for s, _, _ in data]))
 
@@ -62,6 +72,7 @@ class toyDataset(data.Dataset):
         self.data_story = torch.LongTensor(story)
         self.data_query = torch.LongTensor(query)
         # answer = answer / np.expand_dims(answer.sum(axis=1), 1)
+        answer.astype(np.float32)
         self.data_answer = torch.FloatTensor(answer)
         assert True, "dummy statement for debug"
 
@@ -72,6 +83,6 @@ class toyDataset(data.Dataset):
         return len(self.data_story)
 
 
-dataset_dir = "data/lic/train_part.json"
+dataset_dir = "data/lic/"
 tr_dataset = toyDataset(dataset_dir, train=True)
 te_dataset = toyDataset(dataset_dir, train=False)
