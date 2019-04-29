@@ -120,7 +120,7 @@ def vectorize_data(data, word_idx, sentence_size, memory_size):
         lq = max(0, sentence_size - len(query))
         q = [word_idx.get(w, 1) for w in query] + [0] * lq
 
-        y = np.zeros(len(word_idx) + 1) # 1 is reserved for <unk>
+        y = np.zeros(len(word_idx))
         for a in answer:
             y[word_idx.get(a, 1)] = 1
 

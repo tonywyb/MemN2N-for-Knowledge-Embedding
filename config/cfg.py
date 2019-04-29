@@ -32,7 +32,7 @@ config = {
         'decay_interval': 25,                       # epoch interval for learning rate decay
         'decay_ratio': 0.5,                         # learning rate decay
         'max_clip': 40.0,                           # gradient noise and clip
-        'max_hops': 3,                              # hops of memory network
+        'max_hops': 1,                              # hops of memory network
         'embedding_dim': 20,                        # query/memory embedding in memory network
         'log_interval': 500,                        # Logging interval for debugging (None, int)
         'params': {

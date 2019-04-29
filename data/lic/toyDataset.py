@@ -39,8 +39,12 @@ class toyDataset(data.Dataset):
 
         # word_idx = defaultdict(int)
         word_idx = {}
+        word_idx["<pad>"] = 0
+        word_idx["<unk>"] = 1
         for i, word in enumerate(self.vocab, 2):
             word_idx[word] = i
+
+        # <pad>:0, <unk>:1
 
         self.max_story_size = max([len(story) for story, _, _ in data])
         self.query_size = max([len(query) for _, query, _ in data])
@@ -52,9 +56,9 @@ class toyDataset(data.Dataset):
         # for i in range(self.memory_size):
         #     word_idx["time{}".format(i+1)] = "time{}".format(i+1)
 
-        self.num_vocab = len(word_idx) + 2 # +2 for nil word
+        self.num_vocab = len(word_idx)
         self.sentence_size = max(self.query_size, self.sentence_size) # for the position
-        self.sentence_size += 1  # +1 for time words
+        # self.sentence_size += 1  # +1 for time words
         self.word_idx = word_idx
         self.idx_word = dict(zip(self.word_idx.values(), self.word_idx.keys()))
         self.idx_word[0] = "<pad>"
