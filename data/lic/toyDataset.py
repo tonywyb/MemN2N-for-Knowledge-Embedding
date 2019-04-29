@@ -39,8 +39,8 @@ class toyDataset(data.Dataset):
 
         # word_idx = defaultdict(int)
         word_idx = {}
-        word_idx["<pad>"] = 0
-        word_idx["<unk>"] = 1
+        word_idx["<pad>"] = 1
+        word_idx["<unk>"] = 0
         for i, word in enumerate(self.vocab, 2):
             word_idx[word] = i
 
@@ -61,8 +61,8 @@ class toyDataset(data.Dataset):
         # self.sentence_size += 1  # +1 for time words
         self.word_idx = word_idx
         self.idx_word = dict(zip(self.word_idx.values(), self.word_idx.keys()))
-        self.idx_word[0] = "<pad>"
-        self.idx_word[1] = "<unk>"
+        self.idx_word[1] = "<pad>"
+        self.idx_word[0] = "<unk>"
 
         self.mean_story_size = int(np.mean([len(s) for s, _, _ in data]))
 

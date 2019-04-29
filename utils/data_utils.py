@@ -102,7 +102,7 @@ def vectorize_data(data, word_idx, sentence_size, memory_size):
         ss = []
         for i, sentence in enumerate(story, 1):
             ls = max(0, sentence_size - len(sentence))
-            ss.append([word_idx.get(w, 1) for w in sentence] + [0] * ls)
+            ss.append([word_idx.get(w, 0) for w in sentence] + [1] * ls)
 
         # take only the most recent sentences that fit in memory
         ss = ss[::-1][:memory_size][::-1]
@@ -118,11 +118,11 @@ def vectorize_data(data, word_idx, sentence_size, memory_size):
             ss.append([0] * sentence_size)
 
         lq = max(0, sentence_size - len(query))
-        q = [word_idx.get(w, 1) for w in query] + [0] * lq
+        q = [word_idx.get(w, 0) for w in query] + [1] * lq
 
         y = np.zeros(len(word_idx))
         for a in answer:
-            y[word_idx.get(a, 1)] = 1
+            y[word_idx.get(a, 0)] = 1
 
         S.append(ss); Q.append(q); A.append(y)
     return np.array(S), np.array(Q), np.array(A)
