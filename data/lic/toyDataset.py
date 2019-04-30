@@ -14,7 +14,7 @@ class toyDataset(data.Dataset):
         data_path = os.path.join(dataset_dir, "train_part.json")
         dict_path = os.path.join(dataset_dir, "toylic_word")
         extract_knowledge(data_path)
-        train_data, test_data, val_data = pre_process(data_path, ground_filter=False)
+        train_data, test_data, val_data = pre_process(data_path, ground_filter=True)
         data = train_data + test_data + val_data
 
         if not os.path.exists(dict_path):

@@ -14,7 +14,7 @@ def pre_process(filename="data/lic/train+test.json", ground_filter=True):
         #     nil_word = f.read().strip().split(" ")
         with open(filename, "rb") as f:
             dict = json.loads(f.read())
-            train_num = int(len(dict["train"]) / 3)
+            div_num = int(len(dict["train"]) / 10)
             res_lis = list()
             res_cnt = 0
             for tri in dict["train"]:
@@ -25,26 +25,20 @@ def pre_process(filename="data/lic/train+test.json", ground_filter=True):
                     if cnt == 0:
                         tmp2 = dict["train"][tri]["conversation"][0].strip().split(" ")\
                                                + dict["train"][tri]["conversation"][1].strip().split(" ")
-                        if res_cnt >= train_num:
-                            tmp3 = dict["train"][tri]["conversation"][2].strip().split(" ")
+                        if ground_filter:
+                            tmp3 = list(
+                                filter(lambda t: t in kg_word,
+                                       dict["train"][tri]["conversation"][2].strip().split(" ")))
                         else:
-                            if ground_filter:
-                                tmp3 = list(
-                                    filter(lambda t: t in kg_word,
-                                           dict["train"][tri]["conversation"][2].strip().split(" ")))
-                            else:
-                                tmp3 = dict["train"][tri]["conversation"][2].strip().split(" ")
+                            tmp3 = dict["train"][tri]["conversation"][2].strip().split(" ")
                     else:
                         tmp2 = dict["train"][tri]["conversation"][2 * cnt + 1].strip().split(" ")
-                        if res_cnt >= train_num:
-                            tmp3 = dict["train"][tri]["conversation"][2 * cnt + 2].strip().split(" ")
+                        if ground_filter:
+                            tmp3 = list(
+                                filter(lambda t: t in kg_word,
+                                       dict["train"][tri]["conversation"][2 * cnt + 2].strip().split(" ")))
                         else:
-                            if ground_filter:
-                                tmp3 = list(
-                                    filter(lambda t: t in kg_word,
-                                           dict["train"][tri]["conversation"][2 * cnt + 2].strip().split(" ")))
-                            else:
-                                tmp3 = dict["train"][tri]["conversation"][2 * cnt + 2].strip().split(" ")
+                            tmp3 = dict["train"][tri]["conversation"][2 * cnt + 2].strip().split(" ")
                     if len(tmp3) == 0:
                         continue
                     res_lis.append([])
@@ -54,7 +48,7 @@ def pre_process(filename="data/lic/train+test.json", ground_filter=True):
                     res_lis[res_cnt][1] = tmp2
                     res_lis[res_cnt][2] = tmp3
                     res_cnt += 1
-        return list(res_lis[:train_num]), list(res_lis[train_num:2 * train_num]), list(res_lis[2 * train_num:])
+        return list(res_lis[:8 * div_num]), list(res_lis[8 * div_num:9 * div_num]), list(res_lis[9 * div_num:])
     elif filename == "data/lic/train_part.json":
         with open("data/lic/toy_knowledge.pkl", "rb") as f:
             kg_word = pkl.load(f)
@@ -93,7 +87,6 @@ def pre_process(filename="data/lic/train+test.json", ground_filter=True):
                         else:
                             tr_lis[tr_cnt][2] = dict["train"][tri]["conversation"][2 * cnt + 2].strip().split(" ")
                     tr_cnt += 1
-            test_num = int(len(dict["test"]) / 2)
             for tei in dict["test"]:
                 kg = get_knowledge_lis(dict["test"][tei]["knowledge"])
                 cur_len = 1 + (len(dict["test"][tei]["conversation"]) - 3) // 2
@@ -105,12 +98,23 @@ def pre_process(filename="data/lic/train+test.json", ground_filter=True):
                     if cnt == 0:
                         te_lis[te_cnt][1] = dict["test"][tei]["conversation"][0].strip().split(" ")\
                                                + dict["test"][tei]["conversation"][1].strip().split(" ")
-                        te_lis[te_cnt][2] = dict["test"][tei]["conversation"][2].strip().split(" ")
+                        if ground_filter:
+                            te_lis[te_cnt][2] = list(
+                                filter(lambda t: t in kg_word,
+                                       dict["test"][tei]["conversation"][2].strip().split(" ")))
+                        else:
+                            te_lis[te_cnt][2] = dict["test"][tei]["conversation"][2].strip().split(" ")
                     else:
                         te_lis[te_cnt][1] = dict["test"][tei]["conversation"][2 * cnt + 1].strip().split(" ")
-                        te_lis[te_cnt][2] = dict["test"][tei]["conversation"][2 * cnt + 2].strip().split(" ")
+                        if ground_filter:
+                            te_lis[te_cnt][2] = list(
+                                filter(lambda t: t in kg_word,
+                                       dict["test"][tei]["conversation"][2 * cnt + 2].strip().split(" ")))
+                        else:
+                            te_lis[te_cnt][2] = dict["test"][tei]["conversation"][2 * cnt + 2].strip().split(" ")
                     te_cnt += 1
-        return tr_lis, list(te_lis[:test_num]), list(te_lis[test_num:])
+            val_num = int(len(dict["test"]) / 2)
+        return tr_lis, list(te_lis[:val_num]), list(te_lis[val_num:])
     else:
         assert False, "lic only has 2 datasets! pick one!"
 
