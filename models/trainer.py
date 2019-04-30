@@ -8,7 +8,7 @@ import numpy as np
 
 import sys
 sys.path.append('./')
-from utils.misc_utils import get_by_dotted_path, add_record, get_records, log_record_dict
+from utils.misc_utils import get_records, log_record_dict
 from utils.plot_utils import create_curve_plots
 from models.rule import RuleExtractor
 
@@ -129,7 +129,7 @@ class Trainer:
                     self.logger.info('    Best validation loss improved to {:.03f}'.format(best_valid_loss))
                     self.save_net(os.path.join(self.config['outdir'], 'best_valid_params.ptp'))
 
-                if best_valid_loss < np.min(get_records('validation.loss', self.global_records)[-max_patience:]):
+                if best_valid_loss < np.min(get_records('valid.loss', self.global_records)[-max_patience:]):
                     early_break = True
 
             # Produce plots

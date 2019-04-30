@@ -10,12 +10,12 @@ import os
 
 
 class toyDataset(data.Dataset):
-    def __init__(self, dataset_dir, memory_size=50, train=True):
+    def __init__(self, dataset_dir, memory_size=50, mode="train"):
         data_path = os.path.join(dataset_dir, "train_part.json")
         dict_path = os.path.join(dataset_dir, "toylic_word")
         extract_knowledge(data_path)
-        train_data, test_data = pre_process(data_path)
-        data = train_data + test_data
+        train_data, test_data, val_data = pre_process(data_path, ground_filter=False)
+        data = train_data + test_data + val_data
 
         if not os.path.exists(dict_path):
             # self.vocab = set()
@@ -37,11 +37,22 @@ class toyDataset(data.Dataset):
             with codecs.open("data/lic/toylic_word", "r", "utf-8") as f:
                 self.vocab = f.read().strip().split(" ")
 
+        self.unk_token = "<unk>"
+        self.pad_token = "<pad>"
+        self.sos_token = "<sos>"
+        self.eos_token = "<eos>"
+        self.unk_id = 0
+        self.pad_id = 1
+        self.sos_id = 2
+        self.eos_id = 3
+
         # word_idx = defaultdict(int)
         word_idx = {}
-        word_idx["<pad>"] = 1
-        word_idx["<unk>"] = 0
-        for i, word in enumerate(self.vocab, 2):
+        word_idx[self.unk_token] = 0
+        word_idx[self.pad_token] = 1
+        word_idx[self.sos_token] = 2
+        word_idx[self.eos_token] = 3
+        for i, word in enumerate(self.vocab, 4):
             word_idx[word] = i
 
         # <pad>:0, <unk>:1
@@ -57,20 +68,26 @@ class toyDataset(data.Dataset):
         #     word_idx["time{}".format(i+1)] = "time{}".format(i+1)
 
         self.num_vocab = len(word_idx)
-        self.sentence_size = max(self.query_size, self.sentence_size) # for the position
+        self.sentence_size = max(self.query_size, self.sentence_size)   # for the position
         # self.sentence_size += 1  # +1 for time words
+        self.sentence_size += 2     # +2 for <sos>, <eos>
         self.word_idx = word_idx
         self.idx_word = dict(zip(self.word_idx.values(), self.word_idx.keys()))
-        self.idx_word[1] = "<pad>"
-        self.idx_word[0] = "<unk>"
+        self.idx_word[0] = self.unk_token
+        self.idx_word[1] = self.pad_token
+        self.idx_word[2] = self.sos_token
+        self.idx_word[3] = self.eos_token
 
         self.mean_story_size = int(np.mean([len(s) for s, _, _ in data]))
 
-        if train:
+        if mode == "train":
             story, query, answer = vectorize_data(train_data, self.word_idx,
                 self.sentence_size, self.memory_size)
-        else:
+        elif mode == "test":
             story, query, answer = vectorize_data(test_data, self.word_idx,
+                self.sentence_size, self.memory_size)
+        elif mode == "valid":
+            story, query, answer = vectorize_data(val_data, self.word_idx,
                 self.sentence_size, self.memory_size)
 
         self.data_story = torch.LongTensor(story)
@@ -88,5 +105,6 @@ class toyDataset(data.Dataset):
 
 
 dataset_dir = "data/lic/"
-tr_dataset = toyDataset(dataset_dir, train=True)
-te_dataset = toyDataset(dataset_dir, train=False)
+tr_dataset = toyDataset(dataset_dir, mode="train")
+te_dataset = toyDataset(dataset_dir, mode="test")
+val_dataset = toyDataset(dataset_dir, mode="valid")
