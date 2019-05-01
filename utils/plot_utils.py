@@ -153,5 +153,5 @@ def curve_plot(values_dict, coarse_range, fine_range):
 def create_curve_plots(name, plot_dict, coarse_range, fine_range, log_dir):
     fig = curve_plot(plot_dict, coarse_range, fine_range)
     fig.suptitle(name)
-    fig.savefig(log_dir + name + '_curve.png', bbox_inches='tight', pad_inches=0)
+    fig.savefig(log_dir + '/' + name + '_curve.png', bbox_inches='tight', pad_inches=0)
     plt.close(fig)

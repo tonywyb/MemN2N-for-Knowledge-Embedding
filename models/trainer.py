@@ -289,11 +289,11 @@ class Trainer:
     def compute_F1(self, preds, labels, log_flag, rule_hops):
         with torch.no_grad():
             # Compute top K predictions
-            ord_ind = np.argsort(preds.data, axis=1, kind='mergesort')
+            ord_ind = np.argsort(preds.cpu().numpy(), axis=1, kind='mergesort')
             # Compute non-zero element each answer(label) batch
             labels_topK = labels.cpu().numpy()
             zero_num = (labels_topK != 0).sum(axis=1)
-            preds_topK = np.zeros_like(preds.data)
+            preds_topK = np.zeros_like(preds.cpu().numpy())
             for i in range(preds.data.shape[0]):
                 idx = ord_ind[i, -zero_num[i]:]
                 preds_topK[i, idx] = 1
