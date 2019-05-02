@@ -194,14 +194,13 @@ class Trainer:
             elif len(target.shape) == 2:            # for lic
                 batch_loss = self.net.total_loss(net_out[1], target.float()).data
                 log_flag = True if batch_idx % log == 0 else False
-                idx_word = data_loader.dataset.idx_word
-
-                def print_sent(idx, idx_word):
-                    idx = idx.tolist()
-                    res = [idx_word[i] for i in idx]
-                    res = list(set(res))
-                    return res
-
+                # idx_word = data_loader.dataset.idx_word
+                #
+                # def print_sent(idx, idx_word):
+                #     idx = idx.tolist()
+                #     res = [idx_word[i] for i in idx]
+                #     res = list(set(res))
+                #     return res
                 # if log_flag:
                 #     tmp = "Key word extraction for sentence \'{}\'"\
                 #         .format(print_sent(query[0, :].cpu().numpy(), idx_word)).encode('gbk')

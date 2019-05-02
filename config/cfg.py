@@ -44,7 +44,7 @@ config = {
     # config to control training
     'train': {
         'stop_crit':{
-            'max_patience': 10,                     # patience for early stopping (int, None)
+            'max_patience': 30,                     # patience for early stopping (int, None)
             'max_epoch': 50                         # maximum epochs to run for (int)
         },        
         'batch_size': 1,
