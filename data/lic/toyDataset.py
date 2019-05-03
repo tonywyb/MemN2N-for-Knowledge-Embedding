@@ -44,7 +44,7 @@ class toyDataset(data.Dataset):
             assert len(self.word_idx) == self.vocab_len
             self.idx_word = dict(zip(self.word_idx.values(), self.word_idx.keys()))
             with open(dict_path, "wb") as f:
-                pkl.dump(f, self.word_idx)
+                pkl.dump(self.word_idx, f)
         else:
             with open(dict_path, "rb") as f:
                 self.word_idx = pkl.load(f)
